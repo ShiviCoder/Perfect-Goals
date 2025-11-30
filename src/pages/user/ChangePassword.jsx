@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom'; // ✅ Import navigate hook
 import '../../styles/ChangePassword.css';
 
 const ChangePassword = () => {
@@ -7,11 +8,12 @@ const ChangePassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate(); // ✅ Initialize navigate
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-const userId = localStorage.getItem("userId");
+    const userId = localStorage.getItem("userId");
     if (!userId) {
       setMessage("⚠️ Please log in first to change your password.");
       return;
@@ -25,39 +27,40 @@ const userId = localStorage.getItem("userId");
     setLoading(true);
     setMessage('');
 
-   try {
-  const response = await fetch(`http://localhost:5000/api/change-password/${userId}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ oldPassword, newPassword })
-  });
+    try {
+      const response = await fetch(`http://localhost:5000/api/change-password/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldPassword, newPassword })
+      });
 
-  const text = await response.text(); 
-  console.log("Old Password typed:", oldPassword);
-console.log("New Password typed:", newPassword);  // HTML ya JSON dono handle hoga
-  let data;
-  try {
-    data = JSON.parse(text);             // JSON parse attempt
-  } catch (err) {
-    console.error("Response is not JSON:", text);
-    setMessage("❌ Server error or invalid response.");
-    return;
-  }
+      const text = await response.text(); 
+      console.log("Old Password typed:", oldPassword);
+      console.log("New Password typed:", newPassword);
 
-  if (response.ok) {
-    setMessage(`✅ ${data.message}`);
-    setOldPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-  } else {
-    setMessage(`❌ ${data.message || "Failed to change password"}`);
-  }
-} catch (error) {
-  console.error(error);
-  setMessage("❌ Something went wrong. Please try again later.");
-} finally {
-  setLoading(false);
-}
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        console.error("Response is not JSON:", text);
+        setMessage("❌ Server error or invalid response.");
+        return;
+      }
+
+      if (response.ok) {
+        setMessage(`✅ ${data.message}`);
+        setOldPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        setMessage(`❌ ${data.message || "Failed to change password"}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("❌ Something went wrong. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -94,6 +97,11 @@ console.log("New Password typed:", newPassword);  // HTML ya JSON dono handle ho
 
         {message && <p className="message">{message}</p>}
       </form>
+
+      {/* ✅ Go Back text link */}
+      <p className="go-back-text" onClick={() =>  navigate("/user-dashboard")}>
+        ← Go Back to Dashboard
+      </p>
     </div>
   );
 };

@@ -7,11 +7,11 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
- const handleLogin = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
 
-   try {
+    try {
       const res = await fetch("http://localhost:5000/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -36,7 +36,6 @@ const Login = () => {
         } else {
           navigate("/user-dashboard");
         }
-
       } else {
         alert(data.message || "❌ Invalid credentials");
       }
@@ -46,67 +45,88 @@ const Login = () => {
     } finally {
       setLoading(false);
     }
-};
-
+  };
 
   const styles = {
     body: {
-      height: "100vh",
+      minHeight: "100vh",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
-      backgroundColor: "#004a8f",
+      background: "linear-gradient(135deg, #004a8f, #0066cc)",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      padding: "20px",
     },
     container: {
       background: "#fff",
-      width: "400px",
-      padding: "30px",
-      boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
-      borderRadius: "6px",
+      width: "100%",
+      maxWidth: "400px",
+      padding: "30px 25px",
+      boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
+      borderRadius: "10px",
       textAlign: "center",
+    },
+    heading: {
+      fontSize: "26px",
+      color: "#004a8f",
+      marginBottom: "25px",
+      fontWeight: "700",
     },
     inputGroup: {
       marginBottom: "15px",
+      textAlign: "left",
+    },
+    label: {
+      fontSize: "14px",
+      fontWeight: "600",
+      color: "#333",
+      marginBottom: "6px",
+      display: "block",
     },
     input: {
       width: "100%",
-      padding: "10px",
-      borderRadius: "4px",
+      padding: "12px",
+      borderRadius: "6px",
       border: "1px solid #ccc",
       fontSize: "14px",
+      outline: "none",
+      transition: "border-color 0.3s ease",
     },
     button: {
       marginTop: "10px",
       backgroundColor: "#ffa600",
       border: "none",
-      borderRadius: "4px",
+      borderRadius: "6px",
       padding: "12px 10px",
       color: "white",
-      fontSize: "14px",
+      fontSize: "16px",
       cursor: "pointer",
       fontWeight: 600,
       width: "100%",
+      transition: "background-color 0.3s ease",
     },
-    select: {
-      width: "100%",
-      padding: "10px",
-      borderRadius: "4px",
-      border: "1px solid #ccc",
+    footer: {
+      marginTop: "20px",
       fontSize: "14px",
-      marginBottom: "15px",
+      color: "#555",
+    },
+    link: {
+      color: "#004a8f",
+      fontWeight: 600,
+      textDecoration: "none",
     },
   };
 
   return (
     <div style={styles.body}>
       <div style={styles.container}>
-        <h2>Login</h2>
+        <h2 style={styles.heading}>Login</h2>
         <form onSubmit={handleLogin}>
           <div style={styles.inputGroup}>
+            <label style={styles.label}>Username</label>
             <input
               type="text"
-              placeholder="Username"
+              placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -115,19 +135,36 @@ const Login = () => {
           </div>
 
           <div style={styles.inputGroup}>
+            <label style={styles.label}>Password</label>
             <input
               type="password"
-              placeholder="Password"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               style={styles.input}
             />
           </div>
-          <button type="submit" style={styles.button} disabled={loading}>
+
+          <button
+            type="submit"
+            style={{
+              ...styles.button,
+              backgroundColor: loading ? "#ffa600cc" : "#ffa600",
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+            disabled={loading}
+          >
             {loading ? "Loading..." : "Login"}
           </button>
         </form>
+
+        <p style={styles.footer}>
+          Don’t have an account?{" "}
+          <a href="/register" style={styles.link}>
+            Register here
+          </a>
+        </p>
       </div>
     </div>
   );

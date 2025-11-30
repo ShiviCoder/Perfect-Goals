@@ -6,6 +6,7 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import 'pdfjs-dist/legacy/build/pdf.worker.entry'; // just import, no default
 import SignaturePad from "../../components/SignaturePad";
 import { PDFDocument, rgb } from "pdf-lib";
+import { FaBars, FaTimes } from "react-icons/fa";
 
 // Tell pdfjs to use the worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -26,6 +27,9 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [profileSubTab, setProfileSubTab] = useState(null); // sub nav
   const [signatureFile, setSignatureFile] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
   };
@@ -241,6 +245,15 @@ useEffect(() => {
   const intervalId = setInterval(fetchProgress, 3000);
   return () => clearInterval(intervalId);
 }, [user_id]);
+
+ useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth > 768) setIsSidebarOpen(true);
+      else setIsSidebarOpen(false);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   // ✅ Centralized styles
   const styles = {
     dashboard: {
@@ -251,6 +264,18 @@ useEffect(() => {
       color: "#111",
       fontSize: "14px",
     },
+    menuButton: {
+      position: "fixed",
+      top: "15px",
+      left: "15px",
+      fontSize: "22px",
+      color: "#fff",
+      backgroundColor: "#0b2f5a",
+      padding: "8px",
+      borderRadius: "6px",
+      cursor: "pointer",
+      zIndex: 1001,
+    },
     sidebar: {
       backgroundColor: "#0b2f5a",
       width: "220px",
@@ -260,11 +285,12 @@ useEffect(() => {
       color: "#dde8fc",
       position: "fixed",
       top: 0,
-      left: 0,
+      left: isSidebarOpen ? 0 : "-260px",
       fontWeight: 500,
       boxShadow: "3px 0 8px rgb(0 0 0 / 0.1)",
       zIndex: 1000,
       userSelect: "none",
+      transition: "left 0.3s ease",
     },
     logo: {
       display: "flex",
@@ -292,6 +318,7 @@ useEffect(() => {
       fontWeight: 500,
       textDecoration: "none",
       borderLeft: "4px solid transparent",
+      cursor: "pointer",
     },
     navLinkActive: {
       borderLeft: "4px solid #f7941e",
@@ -299,11 +326,12 @@ useEffect(() => {
       color: "#fff",
     },
     main: {
-      marginLeft: "220px",
-      width: "calc(100% - 220px)",
+      marginLeft: isSidebarOpen ? "220px" : "0",
+      width: isSidebarOpen ? "calc(100% - 220px)" : "100%",
       display: "flex",
       flexDirection: "column",
       minHeight: "100vh",
+      transition: "margin-left 0.3s ease, width 0.3s ease",
     },
     topNavbar: {
       backgroundColor: "#0d2d59",
@@ -316,13 +344,6 @@ useEffect(() => {
       fontSize: "14px",
       boxShadow: "0 2px 4px rgb(0 0 0 / 0.1)",
     },
-    profileImg: {
-      width: "36px",
-      height: "36px",
-      borderRadius: "50%",
-      border: "2px solid #f7941e",
-      objectFit: "cover",
-    },
     announcement: {
       backgroundColor: "#f7941e",
       color: "white",
@@ -333,52 +354,35 @@ useEffect(() => {
       letterSpacing: "0.03em",
       boxShadow: "0 2px 4px rgb(0 0 0 / 0.06)",
       margin: "10px 0",
+      textAlign: "center",
     },
-    entrySummary: {
-      display: "flex",
-      justifyContent: "space-around",
-      padding: "10px 0",
-      borderTop: "1px solid #ddd",
-      borderBottom: "1px solid #ddd",
-      boxShadow: "0 2px 4px rgb(0 0 0 / 0.03)",
-      gap: "24px",
-      maxWidth: "1000px",
-      margin: "0 auto 20px auto",
-      borderRadius: "4px",
-    },
-    entryBox: {
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      flex: "1 1 33.33%",
-      padding: "0 12px",
-    },
-    entryLabel: {
-      fontWeight: 700,
-      textTransform: "uppercase",
-      fontSize: "0.875rem",
-      marginBottom: "8px",
-      letterSpacing: "0.05em",
-      color: "#222",
-    },
-    entryNumber: { fontSize: "30px", fontWeight: 900, color: "#111" },
     graphsContainer: {
       display: "flex",
+      flexWrap: "wrap",
+      justifyContent: "center",
       gap: "24px",
+      margin: "20px auto",
       maxWidth: "1000px",
-      margin: "0 auto",
     },
     graphCard: {
       background: "white",
       borderRadius: "8px",
       boxShadow: "0 8px 16px rgb(25 39 54 / 0.06)",
       padding: "10px 13px",
-      flex: 1,
-      margin: "20px",
+      flex: "1 1 45%",
+      minWidth: "280px",
       minHeight: "260px",
-      position: "relative",
     },
   };
+
+  const handleTabClick = (tabName) => {
+  setActiveTab(tabName);
+
+  // Close sidebar automatically if mobile
+  if (isMobile) {
+    setIsSidebarOpen(false);
+  }
+};
 
   return (
     <div style={styles.dashboard}>
@@ -391,31 +395,31 @@ useEffect(() => {
         <nav style={styles.nav}>
           <div
             style={{ ...styles.navLink, ...(activeTab === "dashboard" ? styles.navLinkActive : {}) }}
-            onClick={() => setActiveTab("dashboard")}
+            onClick={() => handleTabClick("dashboard")}
           >
             Dashboard
           </div>
           <div
             style={{ ...styles.navLink, ...(activeTab === "dataEntry" ? styles.navLinkActive : {}) }}
-            onClick={() => setActiveTab("dataEntry")}
+            onClick={() => handleTabClick("dataEntry")}
           >
             Data Entry
           </div>
           <div
             style={{ ...styles.navLink, ...(activeTab === "agreement" ? styles.navLinkActive : {}) }}
-            onClick={() => setActiveTab("agreement")}
+            onClick={() => handleTabClick("agreement")}
           >
             Show Agreement
           </div>
           <div
             style={{ ...styles.navLink, ...(activeTab === "instructions" ? styles.navLinkActive : {}) }}
-            onClick={() => setActiveTab("instructions")}
+            onClick={() => handleTabClick("instructions")}
           >
             Instructions
           </div>
           <div
             style={{ ...styles.navLink, ...(activeTab === "withdrawal" ? styles.navLinkActive : {}) }}
-            onClick={() => setActiveTab("withdrawal")}
+            onClick={() => handleTabClick("withdrawal")}
           >
             Withdrawal
           </div>
@@ -424,64 +428,113 @@ useEffect(() => {
           <div
             style={{ ...styles.navLink, ...(activeTab === "profile" ? styles.navLinkActive : {}) }}
             onClick={() => {
-              setActiveTab("profile");
+              handleTabClick("profile");
               setProfileSubTab(null); // just show overview by default
             }}
           >
             My Profile
           </div>
-
-          {activeTab === "profile" && (
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              <div
-                style={{
-                  ...styles.navLink,
-                  marginLeft: "12px", // indent for sub-tab
-                  ...(profileSubTab === "editProfile" ? styles.navLinkActive : {}),
-                }}
-                onClick={() => setProfileSubTab("editProfile")}
-              >
-                Edit Profile
-              </div>
-              <div
-                style={{
-                  ...styles.navLink,
-                  marginLeft: "12px", // indent for sub-tab
-                  ...(profileSubTab === "logout" ? styles.navLinkActive : {}),
-                }}
-                onClick={() => setProfileSubTab("logout")}
-              >
-                Logout
-              </div>
-            </div>
-          )}
-
         </nav>
 
       </aside>
 
+       {isMobile && isSidebarOpen && (
+        <div
+          onClick={() => setIsSidebarOpen(false)}
+          style={styles.overlay}
+        ></div>
+      )}
+
+
       {/* Main */}
       <div style={styles.main}>
-        <header style={styles.topNavbar}>
-          <div>Submission End Date: <strong>{submissionStatus}</strong></div>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-          }}>
-            <span>Welcome, {user?.fullName || "User"}!</span>
-            <img
-              src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/0702fb3a-35e7-4f33-b14d-104e1d8c036d.png"
-              alt="User Avatar"
-              style={styles.profileImg}
-              onError={(e) =>
-              (e.target.src =
-                "https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3547847b-b483-42b6-8cc3-22f0fe67430d.png")
-              }
-            />
-          </div>
-        </header>
+     <header
+  style={{
+    ...styles.topNavbar,
+    flexWrap: "wrap",
+    padding: isMobile ? "10px" : "0 20px",
+    justifyContent: isMobile ? "space-between" : "space-between",
+  }}
+>
+  {/* Left side: Menu + Submission date */}
+ <div
+  style={{
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    gap: "15px",
+    flexWrap: "nowrap",
+    overflow: "hidden",
+  }}
+>
+  {/* Left: Menu + Submission Date */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "10px",
+      flexShrink: 1,
+      overflow: "hidden",
+    }}
+  >
+    {isMobile && (
+      <FaBars
+        size={22}
+        color="white"
+        style={{ cursor: "pointer", flexShrink: 0 }}
+        onClick={() => setIsSidebarOpen(true)}
+      />
+    )}
+    <span
+      style={{
+        fontSize: isMobile ? "12px" : "14px",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+      }}
+    >
+      Submission End Date:{" "}
+      <strong style={{ color: "#f7941e" }}>{submissionStatus}</strong>
+    </span>
+  </div>
 
+  {/* Right: Welcome + Avatar */}
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "8px",
+      flexShrink: 0,
+    }}
+  >
+    {!isMobile && (
+      <span
+        style={{
+          fontSize: "14px",
+          whiteSpace: "nowrap",
+        }}
+      >
+        Welcome, {user?.fullName || "User"}!
+      </span>
+    )}
+    <img
+      src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/0702fb3a-35e7-4f33-b14d-104e1d8c036d.png"
+      alt="User Avatar"
+      style={{
+        ...styles.profileImg,
+        width: isMobile ? "32px" : "36px",
+        height: isMobile ? "32px" : "36px",
+      }}
+      onError={(e) =>
+        (e.target.src =
+          "https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3547847b-b483-42b6-8cc3-22f0fe67430d.png")
+      }
+    />
+  </div>
+</div>
+
+</header>
         {activeTab === "instructions" && (
           <div
             style={{
@@ -534,115 +587,230 @@ useEffect(() => {
 
 
 
-        {activeTab === "dashboard" && (
-          <section>
-            <div style={styles.announcement}>
-              Submission End Date: {submissionStatus}
-            </div>
-            <div style={styles.entrySummary}>
-              <div style={styles.entryBox}>
-                <label style={styles.entryLabel}>Total Entry</label>
-                <div style={styles.entryNumber}>{progress.totalEntries}</div>
-              </div>
-              <div style={styles.entryBox}>
-                <label style={styles.entryLabel}>Pending Entry</label>
-                <div style={styles.entryNumber}>{progress.pendingEntries}</div>
-              </div>
-              <div style={styles.entryBox}>
-                <label style={styles.entryLabel}>Completed Entry</label>
-                <div style={styles.entryNumber}>{progress.completedEntries}</div>
-              </div>
-            </div>
+       {activeTab === "dashboard" && (
+  <section
+    style={{
+      padding: isMobile ? "10px" : "20px",
+      display: "flex",
+      flexDirection: "column",
+      gap: "20px",
+    }}
+  >
+    {/* Announcement */}
+    <div
+      style={{
+        backgroundColor: "#3f6272",
+        color: "white",
+        padding: isMobile ? "8px" : "12px 18px",
+        borderRadius: "8px",
+        textAlign: "center",
+        fontSize: isMobile ? "13px" : "16px",
+      }}
+    >
+      Submission End Date: <strong>{submissionStatus}</strong>
+    </div>
 
-            {/* Graphs */}
-            <div style={styles.graphsContainer}>
-              <div style={styles.graphCard}>
-                <div style={{ marginBottom: "5px", color: "#444c56" }}>Total Entry</div>
-                <div style={{ background: "#eee", height: "28px", borderRadius: "4px", marginBottom: "22px", position: "relative" }}>
-                  <div style={{
-                    width: "100%",
-                    height: "100%",
-                    backgroundColor: "#3f6272",
-                    borderRadius: "4px 0 0 4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    paddingRight: "12px",
-                    color: "white",
-                    fontWeight: 700
-                  }}>
-                    {progress.totalEntries}
-                  </div>
-                </div>
+    {/* Entry Summary Boxes */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        justifyContent: "space-between",
+        alignItems: isMobile ? "stretch" : "center",
+        gap: "15px",
+      }}
+    >
+      {[
+        { label: "Total Entry", value: progress.totalEntries },
+        { label: "Pending Entry", value: progress.pendingEntries },
+        { label: "Completed Entry", value: progress.completedEntries },
+      ].map((item, index) => (
+        <div
+          key={index}
+          style={{
+            flex: 1,
+            minWidth: isMobile ? "100%" : "30%",
+            background: "#f7f9fa",
+            borderRadius: "10px",
+            padding: "15px",
+            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+            textAlign: "center",
+          }}
+        >
+          <label
+            style={{
+              display: "block",
+              fontSize: isMobile ? "13px" : "15px",
+              color: "#555",
+            }}
+          >
+            {item.label}
+          </label>
+          <div
+            style={{
+              fontSize: isMobile ? "20px" : "26px",
+              fontWeight: "bold",
+              color: "#3f6272",
+              marginTop: "5px",
+            }}
+          >
+            {item.value}
+          </div>
+        </div>
+      ))}
+    </div>
 
-                <div style={{ marginBottom: "8px", color: "#678e9f" }}>Completed Entry</div>
-                <div style={{
-                  background: "#eee",
-                  height: "28px",
-                  borderRadius: "4px",
-                  marginBottom: "22px",
-                  overflow: "hidden",
-                  display: "flex"
-                }}>
-                  <div style={{
-                    width: `${(progress.completedEntries / progress.totalEntries) * 100}%`,
-                    height: "100%",
-                    backgroundColor: "#3f6272",
-                    borderRadius: "4px 0 0 4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    paddingRight: "12px",
-                    color: "white",
-                    fontWeight: 700,
-                    transition: "width 0.5s ease"
-                  }}>
-                    {progress.completedEntries}
-                  </div>
-                  <div style={{
-                    flex: 1,
-                    background: "#ddd",
-                    borderRadius: "0 4px 4px 0",
-                  }} />
-                </div>
+    {/* Graphs Container */}
+    <div
+      style={{
+        display: "flex",
+        flexDirection: isMobile ? "column" : "row",
+        gap: "20px",
+        flexWrap: "wrap",
+      }}
+    >
+      {/* Graph 1 */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: isMobile ? "100%" : "48%",
+          background: "#fff",
+          borderRadius: "12px",
+          padding: "20px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        <div style={{ marginBottom: "5px", color: "#444c56", fontWeight: 600 }}>
+          Total Entry
+        </div>
 
-                {/* Pending Entry */}
-                <div style={{ marginBottom: "5px", color: "#444c56" }}>Pending Entry</div>
-                <div style={{
-                  background: "#eee",
-                  height: "28px",
-                  borderRadius: "4px",
-                  overflow: "hidden",
-                  display: "flex"
-                }}>
-                  <div style={{
-                    width: `${(progress.pendingEntries / progress.totalEntries) * 100}%`,
-                    height: "100%",
-                    backgroundColor: "#3f6272",
-                    borderRadius: "4px 0 0 4px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    paddingRight: "12px",
-                    color: "white",
-                    fontWeight: 700,
-                    transition: "width 0.5s ease"
-                  }}>
-                    {progress.pendingEntries}
-                  </div>
-                  <div style={{
-                    flex: 1,
-                    background: "#ddd",
-                    borderRadius: "0 4px 4px 0",
-                  }} />
-                </div>
-              </div>
-              <div style={styles.graphCard}>{/* Graph 2 */}</div>
-            </div>
+        {/* Total Bar */}
+        <div
+          style={{
+            background: "#eee",
+            height: "28px",
+            borderRadius: "4px",
+            marginBottom: "22px",
+            position: "relative",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              backgroundColor: "#3f6272",
+              borderRadius: "4px 0 0 4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              paddingRight: "12px",
+              color: "white",
+              fontWeight: 700,
+            }}
+          >
+            {progress.totalEntries}
+          </div>
+        </div>
 
-            <InfoCards />
-          </section>
-        )}
+        {/* Completed Entry */}
+        <div style={{ marginBottom: "8px", color: "#678e9f" }}>
+          Completed Entry
+        </div>
+        <div
+          style={{
+            background: "#eee",
+            height: "28px",
+            borderRadius: "4px",
+            marginBottom: "22px",
+            overflow: "hidden",
+            display: "flex",
+          }}
+        >
+          <div
+            style={{
+              width: `${(progress.completedEntries / progress.totalEntries) * 100}%`,
+              height: "100%",
+              backgroundColor: "#3f6272",
+              borderRadius: "4px 0 0 4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              paddingRight: "12px",
+              color: "white",
+              fontWeight: 700,
+              transition: "width 0.5s ease",
+            }}
+          >
+            {progress.completedEntries}
+          </div>
+          <div
+            style={{
+              flex: 1,
+              background: "#ddd",
+              borderRadius: "0 4px 4px 0",
+            }}
+          />
+        </div>
+
+        {/* Pending Entry */}
+        <div style={{ marginBottom: "5px", color: "#444c56" }}>
+          Pending Entry
+        </div>
+        <div
+          style={{
+            background: "#eee",
+            height: "28px",
+            borderRadius: "4px",
+            overflow: "hidden",
+            display: "flex",
+          }}
+        >
+          <div
+            style={{
+              width: `${(progress.pendingEntries / progress.totalEntries) * 100}%`,
+              height: "100%",
+              backgroundColor: "#3f6272",
+              borderRadius: "4px 0 0 4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              paddingRight: "12px",
+              color: "white",
+              fontWeight: 700,
+              transition: "width 0.5s ease",
+            }}
+          >
+            {progress.pendingEntries}
+          </div>
+          <div
+            style={{
+              flex: 1,
+              background: "#ddd",
+              borderRadius: "0 4px 4px 0",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Graph 2 placeholder */}
+      <div
+        style={{
+          flex: 1,
+          minWidth: isMobile ? "100%" : "48%",
+          background: "#fff",
+          borderRadius: "12px",
+          padding: "20px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+      >
+        {/* Add chart or stats here */}
+      </div>
+    </div>
+
+    {/* Info Cards */}
+    <InfoCards />
+  </section>
+)}
 
         {activeTab === "dataEntry" && (
           <section>
@@ -699,225 +867,297 @@ useEffect(() => {
           </section>
         )}
         {activeTab === "profile" && (
-          <section style={{ padding: "20px" }}>
-            {!profileSubTab && (
-              <div
-                style={styles.profileContainer}
-              >
-                <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "12px", color: "#0b2f5a" }}>
-                  Profile Overview
-                </h2>
-                <p style={{ fontSize: "1rem", lineHeight: "1.6", color: "#333" }}>
-                  Welcome, {user?.fullName}!
-                </p>
-              </div>
-            )}
+  <section style={{ padding: "20px" }}>
+    {/* Add Profile Sub Navigation Tabs */}
+    <div style={{
+      display: "flex",
+      gap: "10px",
+      marginBottom: "20px",
+      borderBottom: "1px solid #ddd",
+      paddingBottom: "10px"
+    }}>
+      <button
+        onClick={() => setProfileSubTab("overview")}
+        style={{
+          padding: "8px 16px",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          backgroundColor: profileSubTab === "overview" ? "#0b2f5a" : "#f0f0f0",
+          color: profileSubTab === "overview" ? "white" : "#333",
+          fontWeight: "600",
+          fontSize: "14px"
+        }}
+      >
+        Overview
+      </button>
+      <button
+        onClick={() => setProfileSubTab("editProfile")}
+        style={{
+          padding: "8px 16px",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          backgroundColor: profileSubTab === "editProfile" ? "#0b2f5a" : "#f0f0f0",
+          color: profileSubTab === "editProfile" ? "white" : "#333",
+          fontWeight: "600",
+          fontSize: "14px"
+        }}
+      >
+        Edit Profile
+      </button>
+      <button
+        onClick={() => setProfileSubTab("logout")}
+        style={{
+          padding: "8px 16px",
+          border: "none",
+          borderRadius: "4px",
+          cursor: "pointer",
+          backgroundColor: profileSubTab === "logout" ? "#0b2f5a" : "#f0f0f0",
+          color: profileSubTab === "logout" ? "white" : "#333",
+          fontWeight: "600",
+          fontSize: "14px"
+        }}
+      >
+        Logout
+      </button>
+    </div>
 
-            {profileSubTab === "editProfile" && (
-              <div
-                style={{
-                  padding: "20px",
-                  backgroundColor: "#f1f4f8",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
-                  maxWidth: "500px",
-                  marginTop: "10px",
-                }}
-              >
-                <h2 style={{ marginBottom: "16px", color: "#0b2f5a" }}>Edit Profile</h2>
-                <form
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    const updatedData = {
-                      accountNumber: e.target.accountNumber.value,
-                      bankName: e.target.bankName.value,
-                      branchName: e.target.branchName.value,
-                      ifscCode: e.target.ifscCode.value,
-                    };
-                    try {
-                      const response = await fetch(`http://localhost:5000/api/user/${user.id}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(updatedData),
-                      });
-                      if (!response.ok) throw new Error("Update failed");
-                      const data = await response.json();
-                      setUser(data.user); // update local state
-                      alert("Profile updated successfully!");
-                    } catch (err) {
-                      console.error(err);
-                      alert("Failed to update profile");
-                    }
-                  }}
-                  style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-                >
-                  {/* Full Name (read-only) */}
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <label style={{ fontWeight: 600, marginBottom: "4px" }}>Full Name:</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      defaultValue={user?.fullName}
-                      readOnly
-                      style={{
-                        padding: "8px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                        backgroundColor: "#e0e0e0",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
+    {/* Overview Tab Content */}
+    {(!profileSubTab || profileSubTab === "overview") && (
+      <div
+        style={{
+          padding: "20px",
+          backgroundColor: "#f1f4f8",
+          borderRadius: "8px",
+          boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
+        }}
+      >
+        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "12px", color: "#0b2f5a" }}>
+          Profile Overview
+        </h2>
+        <p style={{ fontSize: "1rem", lineHeight: "1.6", color: "#333", marginBottom: "20px" }}>
+          Welcome, {user?.fullName}!
+        </p>
+        
+        {/* Display user details */}
+        <div style={{ display: "grid", gap: "10px" }}>
+          <div><strong>Full Name:</strong> {user?.fullName}</div>
+          <div><strong>Email:</strong> {user?.email}</div>
+          <div><strong>Contact:</strong> {user?.contactNumber}</div>
+          <div><strong>Address:</strong> {user?.address}</div>
+          {user?.accountNumber && <div><strong>Account Number:</strong> {user.accountNumber}</div>}
+          {user?.bankName && <div><strong>Bank Name:</strong> {user.bankName}</div>}
+          {user?.branchName && <div><strong>Branch Name:</strong> {user.branchName}</div>}
+          {user?.ifscCode && <div><strong>IFSC Code:</strong> {user.ifscCode}</div>}
+        </div>
+      </div>
+    )}
 
-                  {/* Email (read-only) */}
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <label style={{ fontWeight: 600, marginBottom: "4px" }}>Email:</label>
-                    <input
-                      type="email"
-                      name="email"
-                      defaultValue={user?.email}
-                      readOnly
-                      style={{
-                        padding: "8px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                        backgroundColor: "#e0e0e0",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
+    {/* Edit Profile Tab Content */}
+    {profileSubTab === "editProfile" && (
+      <div
+        style={{
+          padding: "20px",
+          backgroundColor: "#f1f4f8",
+          borderRadius: "8px",
+          boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
+          maxWidth: "500px",
+        }}
+      >
+        <h2 style={{ marginBottom: "16px", color: "#0b2f5a" }}>Edit Profile</h2>
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const updatedData = {
+              accountNumber: e.target.accountNumber.value,
+              bankName: e.target.bankName.value,
+              branchName: e.target.branchName.value,
+              ifscCode: e.target.ifscCode.value,
+            };
+            try {
+              const response = await fetch(`http://localhost:5000/api/user/${user.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatedData),
+              });
+              if (!response.ok) throw new Error("Update failed");
+              const data = await response.json();
+              setUser(data.user);
+              alert("Profile updated successfully!");
+              setProfileSubTab("overview"); // Go back to overview after success
+            } catch (err) {
+              console.error(err);
+              alert("Failed to update profile");
+            }
+          }}
+          style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+        >
+          {/* Full Name (read-only) */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Full Name:</label>
+            <input
+              type="text"
+              name="fullName"
+              defaultValue={user?.fullName}
+              readOnly
+              style={{
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                backgroundColor: "#e0e0e0",
+                fontSize: "14px",
+              }}
+            />
+          </div>
 
-                  {/* Account Number */}
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <label style={{ fontWeight: 600, marginBottom: "4px" }}>Account Number:</label>
-                    <input
-                      type="text"
-                      name="accountNumber"
-                      defaultValue={user?.accountNumber || ""}
-                      style={{
-                        padding: "8px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
+          {/* Email (read-only) */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Email:</label>
+            <input
+              type="email"
+              name="email"
+              defaultValue={user?.email}
+              readOnly
+              style={{
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                backgroundColor: "#e0e0e0",
+                fontSize: "14px",
+              }}
+            />
+          </div>
 
-                  {/* Bank Name */}
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <label style={{ fontWeight: 600, marginBottom: "4px" }}>Bank Name:</label>
-                    <input
-                      type="text"
-                      name="bankName"
-                      defaultValue={user?.bankName || ""}
-                      style={{
-                        padding: "8px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
+          {/* Account Number */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Account Number:</label>
+            <input
+              type="text"
+              name="accountNumber"
+              defaultValue={user?.accountNumber || ""}
+              style={{
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "14px",
+              }}
+            />
+          </div>
 
-                  {/* Branch Name */}
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <label style={{ fontWeight: 600, marginBottom: "4px" }}>Branch Name:</label>
-                    <input
-                      type="text"
-                      name="branchName"
-                      defaultValue={user?.branchName || ""}
-                      style={{
-                        padding: "8px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
+          {/* Bank Name */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Bank Name:</label>
+            <input
+              type="text"
+              name="bankName"
+              defaultValue={user?.bankName || ""}
+              style={{
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "14px",
+              }}
+            />
+          </div>
 
-                  {/* IFSC Code */}
-                  <div style={{ display: "flex", flexDirection: "column" }}>
-                    <label style={{ fontWeight: 600, marginBottom: "4px" }}>IFSC Code:</label>
-                    <input
-                      type="text"
-                      name="ifscCode"
-                      defaultValue={user?.ifscCode || ""}
-                      style={{
-                        padding: "8px",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc",
-                        fontSize: "14px",
-                      }}
-                    />
-                  </div>
+          {/* Branch Name */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Branch Name:</label>
+            <input
+              type="text"
+              name="branchName"
+              defaultValue={user?.branchName || ""}
+              style={{
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "14px",
+              }}
+            />
+          </div>
 
-                  <button
-                    type="submit"
-                    style={{
-                      padding: "10px 16px",
-                      backgroundColor: "#0b2f5a",
-                      color: "#fff",
-                      fontWeight: 600,
-                      borderRadius: "4px",
-                      border: "none",
-                      cursor: "pointer",
-                      marginTop: "8px",
-                    }}
-                  >
-                    Save Changes
-                  </button>
-                </form>
-              </div>
-            )}
+          {/* IFSC Code */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <label style={{ fontWeight: 600, marginBottom: "4px" }}>IFSC Code:</label>
+            <input
+              type="text"
+              name="ifscCode"
+              defaultValue={user?.ifscCode || ""}
+              style={{
+                padding: "8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                fontSize: "14px",
+              }}
+            />
+          </div>
 
+          <button
+            type="submit"
+            style={{
+              padding: "10px 16px",
+              backgroundColor: "#0b2f5a",
+              color: "#fff",
+              fontWeight: 600,
+              borderRadius: "4px",
+              border: "none",
+              cursor: "pointer",
+              marginTop: "8px",
+            }}
+          >
+            Save Changes
+          </button>
+        </form>
+      </div>
+    )}
 
-            {profileSubTab === "logout" && (
-              <div
-                style={{
-                  padding: "20px",
-                  backgroundColor: "#f1f4f8",
-                  borderRadius: "8px",
-                  boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
-                  maxWidth: "400px",
-                  marginTop: "10px",
-                }}
-              >
+    {/* Logout Tab Content */}
+    {profileSubTab === "logout" && (
+      <div
+        style={{
+          padding: "20px",
+          backgroundColor: "#f1f4f8",
+          borderRadius: "8px",
+          boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
+          maxWidth: "400px",
+        }}
+      >
+        {/* User info */}
+        <div style={{ marginBottom: "16px" }}>
+          <p style={{ margin: "4px 0", fontWeight: 600, color: "#0b2f5a" }}>
+            Name: {user?.fullName || "User"}
+          </p>
+          <p style={{ margin: "4px 0", fontWeight: 500, color: "#222" }}>
+            Email: {user?.email || "user@example.com"}
+          </p>
+        </div>
 
-                {/* User info */}
-                <div style={{ marginBottom: "16px" }}>
-                  <p style={{ margin: "4px 0", fontWeight: 600, color: "#0b2f5a" }}>
-                    Name: {user?.fullName || "User"}
-                  </p>
-                  <p style={{ margin: "4px 0", fontWeight: 500, color: "#222" }}>
-                    Email: {user?.email || "user@example.com"}
-                  </p>
-                </div>
+        <p style={{ marginBottom: "16px", color: "#222" }}>
+          Are you sure you want to logout?
+        </p>
 
-                <p style={{ marginBottom: "16px", color: "#222" }}>
-                  Are you sure you want to logout?
-                </p>
-
-                <button
-                  onClick={() => {
-                    localStorage.removeItem("userData");
-                    navigate("/login");
-                  }}
-                  style={{
-                    padding: "10px 16px",
-                    backgroundColor: "#f7941e",
-                    color: "#fff",
-                    fontWeight: 600,
-                    borderRadius: "4px",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  Confirm Logout
-                </button>
-              </div>
-            )}
-          </section>
-        )}
+        <button
+          onClick={() => {
+            localStorage.removeItem("userData");
+            navigate("/login");
+          }}
+          style={{
+            padding: "10px 16px",
+            backgroundColor: "#f7941e",
+            color: "#fff",
+            fontWeight: 600,
+            borderRadius: "4px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          Confirm Logout
+        </button>
+      </div>
+    )}
+  </section>
+)}
 
         {activeTab === "withdrawal" && (
           <section

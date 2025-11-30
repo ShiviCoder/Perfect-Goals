@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { Document, Page } from "react-pdf"; // for PDF preview
+import { Document, Page } from "react-pdf";
+
 const Registration = () => {
   const [fullName, setFullName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
@@ -10,30 +11,24 @@ const Registration = () => {
   const [dob, setDob] = useState("");
   const [address, setAddress] = useState("");
   const [generatedUser, setGeneratedUser] = useState(null);
-  const [pdfURL, setPdfURL] = useState(null);
   const [pdfBlob, setPdfBlob] = useState(null);
-
 
   const navigate = useNavigate();
 
   useEffect(() => {
     return () => {
       if (pdfBlob) URL.revokeObjectURL(pdfBlob);
-    }
-  }, [pdfBlob])
+    };
+  }, [pdfBlob]);
 
-  // Generate random username
   const generateUsername = () => {
-
-    const randomNum1 = Math.floor(10000 + Math.random() * 90000);   // 5-digit
-    const randomNum2 = Math.floor(1000000 + Math.random() * 9000000); // 7-digit
+    const randomNum1 = Math.floor(10000 + Math.random() * 90000);
+    const randomNum2 = Math.floor(1000000 + Math.random() * 9000000);
     return `${randomNum1}PYC${randomNum2}`;
   };
 
-  // Generate random password
   const generatePassword = () => {
-    const chars =
-      "0123456789";
+    const chars = "0123456789";
     let pass = "";
     for (let i = 0; i < 8; i++) {
       pass += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -42,63 +37,28 @@ const Registration = () => {
   };
 
   const createAgreementPDF = async (fullName, address) => {
-    const existingPdfBytes = await fetch("/Agreement.pdf").then(res => res.arrayBuffer());
+    const existingPdfBytes = await fetch("/Agreement.pdf").then((res) =>
+      res.arrayBuffer()
+    );
     const pdfDoc = await PDFDocument.load(existingPdfBytes);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const page = pdfDoc.getPages()[1];
-    const { width, height } = page.getSize();
-    console.log("Page size:", page.getSize());
 
-    // Name & Address draw
-    page.drawText(fullName, {
-      x: 80,
-      y: 700,
-      size: 12,
-      font,
-      color: rgb(0, 0, 0)
-    });
-
-    page.drawText(address, {
-      x: 80,
-      y: 680,
-      size: 12,
-      font,
-      color: rgb(0, 0, 0)
-    });
-
-    page.drawText(fullName, {
-      x: 80,
-      y: 50,
-      size: 12,
-      font,
-      color: rgb(0, 0, 0)
-    });
-
-    page.drawText(address, {
-      x: 80,
-      y: 30,
-      size: 12,
-      font,
-      color: rgb(0, 0, 0)
-    });
+    page.drawText(fullName, { x: 80, y: 700, size: 12, font, color: rgb(0, 0, 0) });
+    page.drawText(address, { x: 80, y: 680, size: 12, font, color: rgb(0, 0, 0) });
+    page.drawText(fullName, { x: 80, y: 50, size: 12, font, color: rgb(0, 0, 0) });
+    page.drawText(address, { x: 80, y: 30, size: 12, font, color: rgb(0, 0, 0) });
 
     const pdfBytes = await pdfDoc.save();
 
+    const base64 = btoa(
+      new Uint8Array(pdfBytes).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        ""
+      )
+    );
 
-    function arrayBufferToBase64(buffer) {
-      let binary = '';
-      const bytes = new Uint8Array(buffer);
-      const chunkSize = 0x8000;
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.subarray(i, i + chunkSize);
-        binary += String.fromCharCode.apply(null, chunk);
-      }
-      return btoa(binary)
-    }
-    const base64 = arrayBufferToBase64(pdfBytes);
-    const dataUrl = `data:application/pdf;base64,${base64}`;
-
-    return dataUrl;
+    return `data:application/pdf;base64,${base64}`;
   };
 
   const handleSubmit = async (e) => {
@@ -116,7 +76,7 @@ const Registration = () => {
       address,
       username,
       password,
-      registrationDate: new Date().toISOString()
+      registrationDate: new Date().toISOString(),
     };
 
     try {
@@ -127,45 +87,43 @@ const Registration = () => {
       });
 
       const result = await response.json();
-      console.log("Server Response:", result);
 
       if (response.ok) {
         const pdfDataURL = await createAgreementPDF(fullName, address);
-        console.log("Generated PDF DataURL:", pdfDataURL?.slice(0, 100));
         if (pdfDataURL) {
-
           localStorage.setItem("agreementPDF", pdfDataURL);
-          console.log("PDF saved to localStorage:", pdfDataURL.slice(0, 50));
         }
         setGeneratedUser({ fullName, username, password });
-
       } else {
         alert(result.message);
       }
     } catch (error) {
       console.error("Error:", error);
+      alert("Something went wrong. Please try again.");
     }
   };
 
   const handleOk = () => {
-    navigate(""); // Go to login page
+    navigate("/login");
   };
 
   const styles = {
     body: {
-      height: "100vh",
+      minHeight: "100vh",
       display: "flex",
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: "#004a8f",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+      padding: "20px",
     },
     container: {
       background: "#fff",
-      width: "420px",
-      padding: "30px 35px 40px",
+      width: "100%",
+      maxWidth: "420px",
+      padding: "30px 25px",
       boxShadow: "0 8px 16px rgba(0,0,0,0.2)",
-      borderRadius: "6px",
+      borderRadius: "8px",
       textAlign: "center",
     },
     logoWrapper: {
@@ -173,7 +131,7 @@ const Registration = () => {
     },
     logoImg: {
       borderRadius: "50%",
-      width: "80px",
+      width: "70px",
       marginBottom: "10px",
     },
     logoText: {
@@ -189,14 +147,16 @@ const Registration = () => {
       borderRadius: "4px",
       overflow: "hidden",
       marginBottom: "15px",
+      flexWrap: "nowrap",
     },
     inputIcon: {
       backgroundColor: "#ccc",
-      padding: "10px 12px",
+      padding: "10px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       color: "#4a4a4a",
+      minWidth: "40px",
     },
     input: {
       border: "none",
@@ -205,6 +165,7 @@ const Registration = () => {
       fontSize: "14px",
       color: "#4a4a4a",
       flexGrow: 1,
+      width: "100%",
     },
     button: {
       marginTop: "10px",
@@ -213,10 +174,11 @@ const Registration = () => {
       borderRadius: "4px",
       padding: "12px 10px",
       color: "white",
-      fontSize: "14px",
+      fontSize: "15px",
       cursor: "pointer",
       fontWeight: 600,
       width: "100%",
+      transition: "background 0.3s ease",
     },
     credentialsBox: {
       padding: "20px",
@@ -230,6 +192,8 @@ const Registration = () => {
       margin: "10px 0",
       fontWeight: "600",
       color: "#333",
+      fontSize: "14px",
+      wordBreak: "break-word",
     },
   };
 
@@ -299,7 +263,6 @@ const Registration = () => {
               <span style={styles.inputIcon}>🎂</span>
               <input
                 type="date"
-                placeholder="DOB"
                 required
                 style={styles.input}
                 value={dob}
