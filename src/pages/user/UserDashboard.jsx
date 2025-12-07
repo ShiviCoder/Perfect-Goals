@@ -148,7 +148,7 @@ const UserDashboard = () => {
     formData.append("signature", file);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/upload-signature/${storedUser.id}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload-signature/${storedUser.id}`, {
         method: "POST",
         body: formData,
       });
@@ -178,7 +178,7 @@ const UserDashboard = () => {
 
  const fetchUser = async () => {
   try {
-    const res = await fetch(`http://localhost:5000/api/user/${user_id}`);
+    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/${user_id}`);
     if (!res.ok) throw new Error("Failed to fetch user data");
 
     const data = await res.json();
@@ -231,7 +231,7 @@ useEffect(() => {
 
   const fetchProgress = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/progress/${user_id}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/progress/${user_id}`);
       if (!res.ok) throw new Error("Failed to fetch progress data");
 
       const data = await res.json();
@@ -976,7 +976,7 @@ useEffect(() => {
               ifscCode: e.target.ifscCode.value,
             };
             try {
-              const response = await fetch(`http://localhost:5000/api/user/${user.id}`, {
+              const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/${user.id}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(updatedData),

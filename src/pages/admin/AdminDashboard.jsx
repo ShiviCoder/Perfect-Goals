@@ -129,7 +129,7 @@ const UsersModule = ({ users, handleRemove }) => {
                   <td style={{ border: "1px solid #ddd", padding: "10px" }}>{u.dob}</td>
                   <td style={{ border: "1px solid #ddd", padding: "10px", textAlign: "center" }}>
                     <img
-                      src={`http://localhost:5000/api/user-signature/${u.id}`}
+                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user-signature/${u.id}`}
                       alt="Signature"
                       style={{
                         width: "100px",
@@ -176,7 +176,7 @@ const ExtendDateModule = ({ users, refreshUsers }) => {
       return;
     }
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/extend-submission/${userId}`, {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/extend-submission/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newEndDate: selectedDate }),
@@ -264,7 +264,7 @@ const AdminDashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const fetchUsers = () => {
-    fetch("http://localhost:5000/api/users")
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users`)
       .then((res) => res.json())
       .then((data) => setUsers(data))
       .catch((err) => console.error("Error fetching users:", err));
@@ -278,7 +278,7 @@ const AdminDashboard = () => {
     if (!window.confirm("Are you sure you want to remove this user?")) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/users/${id}`, { method: "DELETE" });
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/users/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete user");
       setUsers((prev) => prev.filter((user) => user.id !== id));
       alert("User removed successfully!");

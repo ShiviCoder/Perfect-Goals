@@ -2,25 +2,45 @@ import express from "express";
 import mysql from "mysql2";
 import cors from "cors";
 import multer from "multer";
-const upload = multer();
+import dotenv from "dotenv";
 
+dotenv.config();
+
+const upload = multer();
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// CORS configuration for production
+const allowedOrigins = process.env.FRONTEND_URL 
+  ? process.env.FRONTEND_URL.split(',') 
+  : ["http://localhost:5173"];
+
 app.use(cors({
-  origin: "http://localhost:5173", // React app ka URL
+  origin: allowedOrigins,
+  credentials: true
 }));
 
 app.get("/ping", (req, res) => {
-  res.json({ message: "pong" });
+  res.json({ message: "pong", env: process.env.NODE_ENV });
 });
-// MySQL Connection
+
+// MySQL Connection with environment variables
 const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "Shivani@2003",
-  database: "perfectgoal"
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME || "perfectgoal"
+});
+
+// Connect to database with error handling
+db.connect((err) => {
+  if (err) {
+    console.error("❌ MySQL connection failed:", err);
+    process.exit(1);
+  }
+  console.log("✅ MySQL connected successfully!");
 });
 
 
@@ -367,4 +387,8 @@ app.get("/api/user/:user_id", (req, res) => {
 });
 
 // Start server
-app.listen(5000, () => console.log("Server running on port 5000"));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+});

@@ -28,7 +28,7 @@ const ChangePassword = () => {
     setMessage('');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/change-password/${userId}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/change-password/${userId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ oldPassword, newPassword })
