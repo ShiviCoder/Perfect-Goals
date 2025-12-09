@@ -1,7 +1,241 @@
 import React, { useState, useEffect } from "react";
 import Registration from "./Registration";
 import { FaBars, FaTimes } from "react-icons/fa";
-const TasksModule = () => <div>Create / Assign / Track resume typing tasks here.</div>;
+const TasksModule = () => {
+  const [usersProgress, setUsersProgress] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchUsersProgress();
+    // Auto-refresh every 5 seconds
+    const interval = setInterval(fetchUsersProgress, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchUsersProgress = async () => {
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('Fetching users progress from:', `${apiUrl}/api/admin/users-progress`);
+      
+      const res = await fetch(`${apiUrl}/api/admin/users-progress`);
+      console.log('Response status:', res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Users progress data:', data);
+        setUsersProgress(data);
+        setError(null);
+      } else {
+        console.error('Failed to fetch users progress:', res.status, res.statusText);
+        const errorText = await res.text();
+        console.error('Error response:', errorText);
+        setError(`Failed to fetch data: ${res.status} ${res.statusText}`);
+      }
+    } catch (err) {
+      console.error("Error fetching users progress:", err);
+      setError(`Network error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <div style={{ textAlign: "center", padding: "40px" }}>Loading tasks data...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: "center", padding: "40px" }}>
+        <div style={{ color: "#d32f2f", marginBottom: "10px" }}>❌ Error loading data</div>
+        <p style={{ color: "#666" }}>{error}</p>
+        <button
+          onClick={fetchUsersProgress}
+          style={{
+            marginTop: "20px",
+            padding: "10px 20px",
+            backgroundColor: "#004a8f",
+            color: "white",
+            border: "none",
+            borderRadius: "4px",
+            cursor: "pointer",
+          }}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <h2 style={{ marginBottom: "20px" }}>📊 User Tasks Progress</h2>
+      <p style={{ color: "#666", marginBottom: "20px" }}>
+        Track how many tasks each user has completed
+      </p>
+
+      {usersProgress.length === 0 ? (
+        <div style={{ textAlign: "center", padding: "40px", backgroundColor: "#fff", borderRadius: "8px" }}>
+          <div style={{ fontSize: "48px", marginBottom: "20px" }}>📋</div>
+          <p style={{ color: "#666", fontSize: "16px" }}>No users found.</p>
+          <p style={{ color: "#999", fontSize: "14px", marginTop: "10px" }}>
+            Users will appear here once they register.
+          </p>
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "#fff", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#004a8f", color: "white" }}>
+                <th style={{ padding: "15px", textAlign: "left", borderRight: "1px solid rgba(255,255,255,0.2)" }}>User Name</th>
+                <th style={{ padding: "15px", textAlign: "left", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Username</th>
+                <th style={{ padding: "15px", textAlign: "left", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Email</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Total Tasks</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Completed</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Pending</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Progress</th>
+                <th style={{ padding: "15px", textAlign: "center" }}>Deadline</th>
+              </tr>
+            </thead>
+            <tbody>
+              {usersProgress.map((user, index) => {
+                const pending = (user.total_entries || 0) - (user.completed_entries || 0);
+                const percentage = Number(user.completion_percentage) || 0;
+                const isComplete = user.completed_entries >= user.total_entries;
+                const deadline = user.submission_end_date ? new Date(user.submission_end_date).toLocaleDateString() : "N/A";
+                const isOverdue = user.submission_end_date && new Date() > new Date(user.submission_end_date);
+
+                return (
+                  <tr
+                    key={user.id}
+                    style={{
+                      backgroundColor: index % 2 === 0 ? "#fff" : "#f9f9f9",
+                      borderBottom: "1px solid #e0e0e0",
+                    }}
+                  >
+                    <td style={{ padding: "15px", borderRight: "1px solid #e0e0e0" }}>
+                      <strong>{user.fullName}</strong>
+                    </td>
+                    <td style={{ padding: "15px", borderRight: "1px solid #e0e0e0" }}>
+                      {user.username}
+                    </td>
+                    <td style={{ padding: "15px", borderRight: "1px solid #e0e0e0" }}>
+                      {user.email}
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      <strong>{user.total_entries || 0}</strong>
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      <span style={{ color: "#4caf50", fontWeight: "600" }}>
+                        {user.completed_entries || 0}
+                      </span>
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      <span style={{ color: pending > 0 ? "#ff9800" : "#4caf50", fontWeight: "600" }}>
+                        {pending}
+                      </span>
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "5px" }}>
+                        <div style={{
+                          width: "100%",
+                          maxWidth: "150px",
+                          height: "20px",
+                          backgroundColor: "#e0e0e0",
+                          borderRadius: "10px",
+                          overflow: "hidden",
+                        }}>
+                          <div style={{
+                            width: `${percentage}%`,
+                            height: "100%",
+                            backgroundColor: isComplete ? "#4caf50" : percentage > 50 ? "#2196f3" : "#ff9800",
+                            transition: "width 0.3s ease",
+                          }}></div>
+                        </div>
+                        <span style={{ fontSize: "12px", fontWeight: "600", color: "#666" }}>
+                          {percentage.toFixed(1)}%
+                        </span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center" }}>
+                      <span style={{
+                        color: isOverdue ? "#d32f2f" : "#666",
+                        fontWeight: isOverdue ? "600" : "normal",
+                      }}>
+                        {deadline}
+                        {isOverdue && <span style={{ display: "block", fontSize: "11px", color: "#d32f2f" }}>⚠️ Overdue</span>}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {/* Summary Stats */}
+          <div style={{
+            marginTop: "30px",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            gap: "20px",
+          }}>
+            <div style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              textAlign: "center",
+            }}>
+              <div style={{ fontSize: "32px", fontWeight: "bold", color: "#004a8f" }}>
+                {usersProgress.length}
+              </div>
+              <div style={{ color: "#666", marginTop: "5px" }}>Total Users</div>
+            </div>
+
+            <div style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              textAlign: "center",
+            }}>
+              <div style={{ fontSize: "32px", fontWeight: "bold", color: "#4caf50" }}>
+                {usersProgress.reduce((sum, u) => sum + (u.completed_entries || 0), 0)}
+              </div>
+              <div style={{ color: "#666", marginTop: "5px" }}>Total Completed Tasks</div>
+            </div>
+
+            <div style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              textAlign: "center",
+            }}>
+              <div style={{ fontSize: "32px", fontWeight: "bold", color: "#ff9800" }}>
+                {usersProgress.reduce((sum, u) => sum + ((u.total_entries || 0) - (u.completed_entries || 0)), 0)}
+              </div>
+              <div style={{ color: "#666", marginTop: "5px" }}>Total Pending Tasks</div>
+            </div>
+
+            <div style={{
+              backgroundColor: "#fff",
+              padding: "20px",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              textAlign: "center",
+            }}>
+              <div style={{ fontSize: "32px", fontWeight: "bold", color: "#2196f3" }}>
+                {usersProgress.filter(u => u.completed_entries >= u.total_entries).length}
+              </div>
+              <div style={{ color: "#666", marginTop: "5px" }}>Users Completed</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 const PaymentsModule = () => <div>Track user earnings, approve/reject payments.</div>;
 const NotificationsModule = ({ users }) => (
   <div>
@@ -167,11 +401,32 @@ const UsersModule = ({ users, handleRemove }) => {
   );
 };
 
-const ExtendDateModule = ({ users, refreshUsers }) => {
-  const [selectedDate, setSelectedDate] = useState("");
+const ExtendDateModule = ({ refreshUsers }) => {
+  const [usersProgress, setUsersProgress] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDates, setSelectedDates] = useState({});
+
+  useEffect(() => {
+    fetchUsersProgress();
+  }, []);
+
+  const fetchUsersProgress = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/users-progress`);
+      if (res.ok) {
+        const data = await res.json();
+        setUsersProgress(data);
+      }
+    } catch (err) {
+      console.error("Error fetching users progress:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleExtend = async (userId) => {
-    if (!selectedDate) {
+    const newDate = selectedDates[userId];
+    if (!newDate) {
       alert("⚠️ Please select a date first!");
       return;
     }
@@ -179,15 +434,18 @@ const ExtendDateModule = ({ users, refreshUsers }) => {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/admin/extend-submission/${userId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newEndDate: selectedDate }),
+        body: JSON.stringify({ newEndDate: newDate }),
       });
 
       const data = await res.json();
       if (res.ok) {
         alert(data.message);
-        refreshUsers();
+        fetchUsersProgress();
+        if (refreshUsers) refreshUsers();
+        // Clear the selected date for this user
+        setSelectedDates(prev => ({ ...prev, [userId]: "" }));
       } else {
-        alert("❌ Failed to extend date");
+        alert("❌ Failed to extend date: " + (data.message || "Unknown error"));
       }
     } catch (err) {
       console.error("Error extending date:", err);
@@ -195,64 +453,107 @@ const ExtendDateModule = ({ users, refreshUsers }) => {
     }
   };
 
+  if (loading) {
+    return <div style={{ textAlign: "center", padding: "40px" }}>Loading users...</div>;
+  }
+
   return (
-    <div style={{ overflowX: "auto" }}>
-      <h3>Extend Submission Dates</h3>
-      {users.length === 0 ? (
+    <div>
+      <h2 style={{ marginBottom: "20px" }}>📅 Extend Submission Dates</h2>
+      <p style={{ color: "#666", marginBottom: "20px" }}>
+        Extend the deadline for users who need more time to complete their tasks
+      </p>
+
+      {usersProgress.length === 0 ? (
         <p>No users found.</p>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "20px", minWidth: "700px" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#f4f4f4" }}>
-              {["Full Name", "Username", "Registration Date", "Submission End Date", "Select New Date", "Action"].map(
-                (h) => (
-                  <th key={h} style={{ border: "1px solid #ddd", padding: "10px" }}>
-                    {h}
-                  </th>
-                )
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td style={{ border: "1px solid #ddd", padding: "10px" }}>{u.fullName}</td>
-                <td style={{ border: "1px solid #ddd", padding: "10px" }}>{u.username}</td>
-                <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-                  {new Date(u.registration_date).toLocaleDateString()}
-                </td>
-                <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-                  {u.submission_end_date
-                    ? new Date(u.submission_end_date).toLocaleDateString()
-                    : "End submission date"}
-                </td>
-                <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-                  <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    style={{ padding: "6px", borderRadius: "4px", border: "1px solid #ccc" }}
-                  />
-                </td>
-                <td style={{ border: "1px solid #ddd", padding: "10px" }}>
-                  <button
-                    style={{
-                      backgroundColor: "#28a745",
-                      color: "white",
-                      border: "none",
-                      padding: "6px 12px",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                    }}
-                    onClick={() => handleExtend(u.id)}
-                  >
-                    Extend
-                  </button>
-                </td>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", backgroundColor: "#fff", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#004a8f", color: "white" }}>
+                <th style={{ padding: "15px", textAlign: "left", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Full Name</th>
+                <th style={{ padding: "15px", textAlign: "left", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Username</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Progress</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Registration Date</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>Current Deadline</th>
+                <th style={{ padding: "15px", textAlign: "center", borderRight: "1px solid rgba(255,255,255,0.2)" }}>New Deadline</th>
+                <th style={{ padding: "15px", textAlign: "center" }}>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {usersProgress.map((u, index) => {
+                const isOverdue = u.submission_end_date && new Date() > new Date(u.submission_end_date);
+                const currentDeadline = u.submission_end_date ? new Date(u.submission_end_date).toLocaleDateString() : "Not Set";
+                
+                return (
+                  <tr
+                    key={u.id}
+                    style={{
+                      backgroundColor: index % 2 === 0 ? "#fff" : "#f9f9f9",
+                      borderBottom: "1px solid #e0e0e0",
+                    }}
+                  >
+                    <td style={{ padding: "15px", borderRight: "1px solid #e0e0e0" }}>
+                      <strong>{u.fullName}</strong>
+                    </td>
+                    <td style={{ padding: "15px", borderRight: "1px solid #e0e0e0" }}>
+                      {u.username}
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      <span style={{ color: u.completed_entries >= u.total_entries ? "#4caf50" : "#ff9800", fontWeight: "600" }}>
+                        {u.completed_entries || 0} / {u.total_entries || 500}
+                      </span>
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      {u.registration_date ? new Date(u.registration_date).toLocaleDateString() : "N/A"}
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      <span style={{
+                        color: isOverdue ? "#d32f2f" : "#666",
+                        fontWeight: isOverdue ? "600" : "normal",
+                      }}>
+                        {currentDeadline}
+                        {isOverdue && <span style={{ display: "block", fontSize: "11px", color: "#d32f2f" }}>⚠️ Overdue</span>}
+                      </span>
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center", borderRight: "1px solid #e0e0e0" }}>
+                      <input
+                        type="date"
+                        value={selectedDates[u.id] || ""}
+                        onChange={(e) => setSelectedDates(prev => ({ ...prev, [u.id]: e.target.value }))}
+                        min={new Date().toISOString().split('T')[0]}
+                        style={{ 
+                          padding: "8px", 
+                          borderRadius: "4px", 
+                          border: "1px solid #ccc",
+                          fontSize: "14px",
+                          width: "150px"
+                        }}
+                      />
+                    </td>
+                    <td style={{ padding: "15px", textAlign: "center" }}>
+                      <button
+                        style={{
+                          backgroundColor: "#28a745",
+                          color: "white",
+                          border: "none",
+                          padding: "8px 16px",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                          fontSize: "14px",
+                          fontWeight: "600",
+                        }}
+                        onClick={() => handleExtend(u.id)}
+                      >
+                        Extend
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -371,7 +672,7 @@ const AdminDashboard = () => {
         {activeTab === "tasks" && <TasksModule />}
         {activeTab === "payments" && <PaymentsModule />}
         {activeTab === "notifications" && <NotificationsModule users={users} />}
-        {activeTab === "extend" && <ExtendDateModule users={users} refreshUsers={fetchUsers} />}
+        {activeTab === "extend" && <ExtendDateModule refreshUsers={fetchUsers} />}
       </main>
     </div>
   );

@@ -1,12 +1,16 @@
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import PGLogo from "../../assets/PG.png";
-import InfoCards from "./InfoCards";
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'pdfjs-dist/legacy/build/pdf.worker.entry'; // just import, no default
-import SignaturePad from "../../components/SignaturePad";
+import { pdfjs } from "react-pdf";
+import "pdfjs-dist/legacy/build/pdf.worker.entry"; // just import, no default
 import { PDFDocument, rgb } from "pdf-lib";
-import { FaBars, FaTimes } from "react-icons/fa";
+import Sidebar from "./components/Sidebar";
+import TopNavbar from "./components/TopNavbar";
+import DashboardTab from "./components/DashboardTab";
+import DataEntryTab from "./components/DataEntryTab";
+import AgreementTab from "./components/AgreementTab";
+import InstructionsTab from "./components/InstructionsTab";
+import ProfileTab from "./components/ProfileTab";
+import WithdrawalTab from "./components/WithdrawalTab";
 
 // Tell pdfjs to use the worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -27,8 +31,7 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [profileSubTab, setProfileSubTab] = useState(null); // sub nav
   const [signatureFile, setSignatureFile] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
@@ -37,6 +40,7 @@ const UserDashboard = () => {
   // 1️⃣ Fetch user info from backend
   const storedUser = JSON.parse(localStorage.getItem("userData"));
   const user_id = storedUser?.id;
+  const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   function base64ToUint8Array(base64) {
     const raw = atob(base64); // decode base64
@@ -148,7 +152,7 @@ const UserDashboard = () => {
     formData.append("signature", file);
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/upload-signature/${storedUser.id}`, {
+      const res = await fetch(`${apiBase}/api/upload-signature/${storedUser.id}`, {
         method: "POST",
         body: formData,
       });
@@ -178,7 +182,7 @@ const UserDashboard = () => {
 
  const fetchUser = async () => {
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/${user_id}`);
+    const res = await fetch(`${apiBase}/api/user/${user_id}`);
     if (!res.ok) throw new Error("Failed to fetch user data");
 
     const data = await res.json();
@@ -231,7 +235,7 @@ useEffect(() => {
 
   const fetchProgress = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/progress/${user_id}`);
+      const res = await fetch(`${apiBase}/api/progress/${user_id}`);
       if (!res.ok) throw new Error("Failed to fetch progress data");
 
       const data = await res.json();
@@ -373,861 +377,127 @@ useEffect(() => {
       minWidth: "280px",
       minHeight: "260px",
     },
+    profileImg: {
+      borderRadius: "50%",
+      objectFit: "cover",
+    },
   };
 
   const handleTabClick = (tabName) => {
-  setActiveTab(tabName);
+    setActiveTab(tabName);
+    // Close sidebar automatically if mobile
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
 
-  // Close sidebar automatically if mobile
-  if (isMobile) {
-    setIsSidebarOpen(false);
-  }
-};
+  const handleProfileSelect = () => {
+    setProfileSubTab(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("userData");
+    navigate("/login");
+  };
+
+  const handleEntryComplete = async () => {
+    try {
+      // Just refresh progress (backend already updated it in data-entry endpoint)
+      const progressRes = await fetch(`${apiBase}/api/progress/${user_id}`);
+      if (progressRes.ok) {
+        const progressData = await progressRes.json();
+        setProgress(progressData);
+      }
+    } catch (err) {
+      console.error("Error fetching progress:", err);
+    }
+  };
 
   return (
     <div style={styles.dashboard}>
       {/* Sidebar */}
-      <aside style={styles.sidebar}>
-        <div style={styles.logo}>
-          <img src={PGLogo} alt="Logo" style={styles.logoImg} />
-          <div style={styles.logoText}>Perfect Your Goals</div>
-        </div>
-        <nav style={styles.nav}>
-          <div
-            style={{ ...styles.navLink, ...(activeTab === "dashboard" ? styles.navLinkActive : {}) }}
-            onClick={() => handleTabClick("dashboard")}
-          >
-            Dashboard
-          </div>
-          <div
-            style={{ ...styles.navLink, ...(activeTab === "dataEntry" ? styles.navLinkActive : {}) }}
-            onClick={() => handleTabClick("dataEntry")}
-          >
-            Data Entry
-          </div>
-          <div
-            style={{ ...styles.navLink, ...(activeTab === "agreement" ? styles.navLinkActive : {}) }}
-            onClick={() => handleTabClick("agreement")}
-          >
-            Show Agreement
-          </div>
-          <div
-            style={{ ...styles.navLink, ...(activeTab === "instructions" ? styles.navLinkActive : {}) }}
-            onClick={() => handleTabClick("instructions")}
-          >
-            Instructions
-          </div>
-          <div
-            style={{ ...styles.navLink, ...(activeTab === "withdrawal" ? styles.navLinkActive : {}) }}
-            onClick={() => handleTabClick("withdrawal")}
-          >
-            Withdrawal
-          </div>
+      <Sidebar
+        styles={styles}
+        activeTab={activeTab}
+        onTabClick={handleTabClick}
+        isSidebarOpen={isSidebarOpen}
+        isMobile={isMobile}
+        onProfileSelect={handleProfileSelect}
+      />
 
-          {/* My Profile */}
-          <div
-            style={{ ...styles.navLink, ...(activeTab === "profile" ? styles.navLinkActive : {}) }}
-            onClick={() => {
-              handleTabClick("profile");
-              setProfileSubTab(null); // just show overview by default
-            }}
-          >
-            My Profile
-          </div>
-        </nav>
-
-      </aside>
-
-       {isMobile && isSidebarOpen && (
+      {isMobile && isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
-          style={styles.overlay}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 999,
+          }}
         ></div>
       )}
 
-
       {/* Main */}
       <div style={styles.main}>
-     <header
-  style={{
-    ...styles.topNavbar,
-    flexWrap: "wrap",
-    padding: isMobile ? "10px" : "0 20px",
-    justifyContent: isMobile ? "space-between" : "space-between",
-  }}
->
-  {/* Left side: Menu + Submission date */}
- <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    gap: "15px",
-    flexWrap: "nowrap",
-    overflow: "hidden",
-  }}
->
-  {/* Left: Menu + Submission Date */}
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
-      flexShrink: 1,
-      overflow: "hidden",
-    }}
-  >
-    {isMobile && (
-      <FaBars
-        size={22}
-        color="white"
-        style={{ cursor: "pointer", flexShrink: 0 }}
-        onClick={() => setIsSidebarOpen(true)}
-      />
-    )}
-    <span
-      style={{
-        fontSize: isMobile ? "12px" : "14px",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-      }}
-    >
-      Submission End Date:{" "}
-      <strong style={{ color: "#f7941e" }}>{submissionStatus}</strong>
-    </span>
-  </div>
+        <TopNavbar
+          styles={styles}
+          submissionStatus={submissionStatus}
+          isMobile={isMobile}
+          user={user}
+          onOpenSidebar={() => setIsSidebarOpen(true)}
+        />
 
-  {/* Right: Welcome + Avatar */}
-  <div
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: "8px",
-      flexShrink: 0,
-    }}
-  >
-    {!isMobile && (
-      <span
-        style={{
-          fontSize: "14px",
-          whiteSpace: "nowrap",
-        }}
-      >
-        Welcome, {user?.fullName || "User"}!
-      </span>
-    )}
-    <img
-      src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/0702fb3a-35e7-4f33-b14d-104e1d8c036d.png"
-      alt="User Avatar"
-      style={{
-        ...styles.profileImg,
-        width: isMobile ? "32px" : "36px",
-        height: isMobile ? "32px" : "36px",
-      }}
-      onError={(e) =>
-        (e.target.src =
-          "https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3547847b-b483-42b6-8cc3-22f0fe67430d.png")
-      }
-    />
-  </div>
-</div>
-
-</header>
-        {activeTab === "instructions" && (
-          <div
-            style={{
-              maxHeight: "600px",
-              overflowY: "auto",
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              padding: "10px",
-            }}
-
-          >
-            <div style={{ marginBottom: "10px", textAlign: "left" }}>
-              <a
-                href="/INSTRUCTIONS.pdf"
-                download="INSTRUCTIONS.pdf"
-                style={{
-                  padding: "6px 12px",
-                  backgroundColor: "#0b2f5a",
-                  color: "#fff",
-                  borderRadius: "4px",
-                  textDecoration: "none",
-                  fontWeight: 600,
-                }}
-              >
-                Download PDF
-              </a>
-            </div>
-
-            <Document
-              file="/INSTRUCTIONS.pdf"
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={(error) => {
-                console.error("PDF load error:", error); // log silently
-              }}
-              options={{ workerSrc: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js' }} // fallback worker
-            >
-              {Array.from(new Array(numPages || 0), (el, index) => (
-                <Page
-                  key={`page_${index + 1}`}
-                  pageNumber={index + 1}
-                  width={800}
-                  renderTextLayer={false}       // disable text layer
-                  renderAnnotationLayer={false} // disable annotations
-                />
-              ))}
-            </Document>
-
-          </div>
+        {activeTab === "dashboard" && (
+          <DashboardTab
+            progress={progress}
+            submissionStatus={submissionStatus}
+            isMobile={isMobile}
+          />
         )}
-
-
-
-       {activeTab === "dashboard" && (
-  <section
-    style={{
-      padding: isMobile ? "10px" : "20px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "20px",
-    }}
-  >
-    {/* Announcement */}
-    <div
-      style={{
-        backgroundColor: "#3f6272",
-        color: "white",
-        padding: isMobile ? "8px" : "12px 18px",
-        borderRadius: "8px",
-        textAlign: "center",
-        fontSize: isMobile ? "13px" : "16px",
-      }}
-    >
-      Submission End Date: <strong>{submissionStatus}</strong>
-    </div>
-
-    {/* Entry Summary Boxes */}
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        justifyContent: "space-between",
-        alignItems: isMobile ? "stretch" : "center",
-        gap: "15px",
-      }}
-    >
-      {[
-        { label: "Total Entry", value: progress.totalEntries },
-        { label: "Pending Entry", value: progress.pendingEntries },
-        { label: "Completed Entry", value: progress.completedEntries },
-      ].map((item, index) => (
-        <div
-          key={index}
-          style={{
-            flex: 1,
-            minWidth: isMobile ? "100%" : "30%",
-            background: "#f7f9fa",
-            borderRadius: "10px",
-            padding: "15px",
-            boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-            textAlign: "center",
-          }}
-        >
-          <label
-            style={{
-              display: "block",
-              fontSize: isMobile ? "13px" : "15px",
-              color: "#555",
-            }}
-          >
-            {item.label}
-          </label>
-          <div
-            style={{
-              fontSize: isMobile ? "20px" : "26px",
-              fontWeight: "bold",
-              color: "#3f6272",
-              marginTop: "5px",
-            }}
-          >
-            {item.value}
-          </div>
-        </div>
-      ))}
-    </div>
-
-    {/* Graphs Container */}
-    <div
-      style={{
-        display: "flex",
-        flexDirection: isMobile ? "column" : "row",
-        gap: "20px",
-        flexWrap: "wrap",
-      }}
-    >
-      {/* Graph 1 */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: isMobile ? "100%" : "48%",
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        }}
-      >
-        <div style={{ marginBottom: "5px", color: "#444c56", fontWeight: 600 }}>
-          Total Entry
-        </div>
-
-        {/* Total Bar */}
-        <div
-          style={{
-            background: "#eee",
-            height: "28px",
-            borderRadius: "4px",
-            marginBottom: "22px",
-            position: "relative",
-          }}
-        >
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              backgroundColor: "#3f6272",
-              borderRadius: "4px 0 0 4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              paddingRight: "12px",
-              color: "white",
-              fontWeight: 700,
-            }}
-          >
-            {progress.totalEntries}
-          </div>
-        </div>
-
-        {/* Completed Entry */}
-        <div style={{ marginBottom: "8px", color: "#678e9f" }}>
-          Completed Entry
-        </div>
-        <div
-          style={{
-            background: "#eee",
-            height: "28px",
-            borderRadius: "4px",
-            marginBottom: "22px",
-            overflow: "hidden",
-            display: "flex",
-          }}
-        >
-          <div
-            style={{
-              width: `${(progress.completedEntries / progress.totalEntries) * 100}%`,
-              height: "100%",
-              backgroundColor: "#3f6272",
-              borderRadius: "4px 0 0 4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              paddingRight: "12px",
-              color: "white",
-              fontWeight: 700,
-              transition: "width 0.5s ease",
-            }}
-          >
-            {progress.completedEntries}
-          </div>
-          <div
-            style={{
-              flex: 1,
-              background: "#ddd",
-              borderRadius: "0 4px 4px 0",
-            }}
-          />
-        </div>
-
-        {/* Pending Entry */}
-        <div style={{ marginBottom: "5px", color: "#444c56" }}>
-          Pending Entry
-        </div>
-        <div
-          style={{
-            background: "#eee",
-            height: "28px",
-            borderRadius: "4px",
-            overflow: "hidden",
-            display: "flex",
-          }}
-        >
-          <div
-            style={{
-              width: `${(progress.pendingEntries / progress.totalEntries) * 100}%`,
-              height: "100%",
-              backgroundColor: "#3f6272",
-              borderRadius: "4px 0 0 4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              paddingRight: "12px",
-              color: "white",
-              fontWeight: 700,
-              transition: "width 0.5s ease",
-            }}
-          >
-            {progress.pendingEntries}
-          </div>
-          <div
-            style={{
-              flex: 1,
-              background: "#ddd",
-              borderRadius: "0 4px 4px 0",
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Graph 2 placeholder */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: isMobile ? "100%" : "48%",
-          background: "#fff",
-          borderRadius: "12px",
-          padding: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        }}
-      >
-        {/* Add chart or stats here */}
-      </div>
-    </div>
-
-    {/* Info Cards */}
-    <InfoCards />
-  </section>
-)}
 
         {activeTab === "dataEntry" && (
-          <section>
-            <h2>Data Entry Content</h2>
-            {/* Add your data entry UI here */}
-          </section>
+          <DataEntryTab
+            userId={user_id}
+            apiBase={apiBase}
+            onEntryComplete={handleEntryComplete}
+            isMobile={isMobile}
+          />
         )}
 
+        {activeTab === "instructions" && (
+          <InstructionsTab
+            numPages={numPages}
+            onDocumentLoadSuccess={onDocumentLoadSuccess}
+          />
+        )}
 
         {activeTab === "agreement" && (
-          <section>
-            {pdfURL ? (
-              <>
-                <Document
-                  file={pdfURL}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                  onLoadError={(error) => console.error("PDF load error:", error)}
-                >
-                  {Array.from(new Array(numPages || 0), (el, index) => (
-                    <Page
-                      key={`page_${index + 1}`}
-                      pageNumber={index + 1}
-                      width={800}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                    />
-                  ))}
-                </Document>
-
-                <div style={{ marginTop: "20px" }}>
-                  <h3>Draw your signature below:</h3>
-                  <input type="file" accept="image/*"
-                    onChange={(e) => setSignatureFile(e.target.files[0])}
-                  />
-                </div>
-                <button
-                  onClick={async () => {
-                    if (!signatureFile) {
-                      alert("Please draw your signature first!");
-                      return;
-                    }
-                    await addSignatureToPDF(signatureFile);
-                    await handleSignatureUpload(signatureFile);
-                  }}
-                  style={{ marginTop: "10px", padding: "8px 16px", background: "#0b2f5a", color: "#fff", borderRadius: "4px" }}
-                >
-                  Save & Download PDF
-                </button>
-              </>
-
-            ) : (
-              <p>Loading pdf...</p>
-            )}
-          </section>
+          <AgreementTab
+            pdfURL={pdfURL}
+            numPages={numPages}
+            onDocumentLoadSuccess={onDocumentLoadSuccess}
+            signatureFile={signatureFile}
+            setSignatureFile={setSignatureFile}
+            addSignatureToPDF={addSignatureToPDF}
+            handleSignatureUpload={handleSignatureUpload}
+          />
         )}
+
         {activeTab === "profile" && (
-  <section style={{ padding: "20px" }}>
-    {/* Add Profile Sub Navigation Tabs */}
-    <div style={{
-      display: "flex",
-      gap: "10px",
-      marginBottom: "20px",
-      borderBottom: "1px solid #ddd",
-      paddingBottom: "10px"
-    }}>
-      <button
-        onClick={() => setProfileSubTab("overview")}
-        style={{
-          padding: "8px 16px",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-          backgroundColor: profileSubTab === "overview" ? "#0b2f5a" : "#f0f0f0",
-          color: profileSubTab === "overview" ? "white" : "#333",
-          fontWeight: "600",
-          fontSize: "14px"
-        }}
-      >
-        Overview
-      </button>
-      <button
-        onClick={() => setProfileSubTab("editProfile")}
-        style={{
-          padding: "8px 16px",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-          backgroundColor: profileSubTab === "editProfile" ? "#0b2f5a" : "#f0f0f0",
-          color: profileSubTab === "editProfile" ? "white" : "#333",
-          fontWeight: "600",
-          fontSize: "14px"
-        }}
-      >
-        Edit Profile
-      </button>
-      <button
-        onClick={() => setProfileSubTab("logout")}
-        style={{
-          padding: "8px 16px",
-          border: "none",
-          borderRadius: "4px",
-          cursor: "pointer",
-          backgroundColor: profileSubTab === "logout" ? "#0b2f5a" : "#f0f0f0",
-          color: profileSubTab === "logout" ? "white" : "#333",
-          fontWeight: "600",
-          fontSize: "14px"
-        }}
-      >
-        Logout
-      </button>
-    </div>
-
-    {/* Overview Tab Content */}
-    {(!profileSubTab || profileSubTab === "overview") && (
-      <div
-        style={{
-          padding: "20px",
-          backgroundColor: "#f1f4f8",
-          borderRadius: "8px",
-          boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
-        }}
-      >
-        <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "12px", color: "#0b2f5a" }}>
-          Profile Overview
-        </h2>
-        <p style={{ fontSize: "1rem", lineHeight: "1.6", color: "#333", marginBottom: "20px" }}>
-          Welcome, {user?.fullName}!
-        </p>
-        
-        {/* Display user details */}
-        <div style={{ display: "grid", gap: "10px" }}>
-          <div><strong>Full Name:</strong> {user?.fullName}</div>
-          <div><strong>Email:</strong> {user?.email}</div>
-          <div><strong>Contact:</strong> {user?.contactNumber}</div>
-          <div><strong>Address:</strong> {user?.address}</div>
-          {user?.accountNumber && <div><strong>Account Number:</strong> {user.accountNumber}</div>}
-          {user?.bankName && <div><strong>Bank Name:</strong> {user.bankName}</div>}
-          {user?.branchName && <div><strong>Branch Name:</strong> {user.branchName}</div>}
-          {user?.ifscCode && <div><strong>IFSC Code:</strong> {user.ifscCode}</div>}
-        </div>
-      </div>
-    )}
-
-    {/* Edit Profile Tab Content */}
-    {profileSubTab === "editProfile" && (
-      <div
-        style={{
-          padding: "20px",
-          backgroundColor: "#f1f4f8",
-          borderRadius: "8px",
-          boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
-          maxWidth: "500px",
-        }}
-      >
-        <h2 style={{ marginBottom: "16px", color: "#0b2f5a" }}>Edit Profile</h2>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            const updatedData = {
-              accountNumber: e.target.accountNumber.value,
-              bankName: e.target.bankName.value,
-              branchName: e.target.branchName.value,
-              ifscCode: e.target.ifscCode.value,
-            };
-            try {
-              const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user/${user.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updatedData),
-              });
-              if (!response.ok) throw new Error("Update failed");
-              const data = await response.json();
-              setUser(data.user);
-              alert("Profile updated successfully!");
-              setProfileSubTab("overview"); // Go back to overview after success
-            } catch (err) {
-              console.error(err);
-              alert("Failed to update profile");
-            }
-          }}
-          style={{ display: "flex", flexDirection: "column", gap: "12px" }}
-        >
-          {/* Full Name (read-only) */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Full Name:</label>
-            <input
-              type="text"
-              name="fullName"
-              defaultValue={user?.fullName}
-              readOnly
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                backgroundColor: "#e0e0e0",
-                fontSize: "14px",
-              }}
-            />
-          </div>
-
-          {/* Email (read-only) */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Email:</label>
-            <input
-              type="email"
-              name="email"
-              defaultValue={user?.email}
-              readOnly
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                backgroundColor: "#e0e0e0",
-                fontSize: "14px",
-              }}
-            />
-          </div>
-
-          {/* Account Number */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Account Number:</label>
-            <input
-              type="text"
-              name="accountNumber"
-              defaultValue={user?.accountNumber || ""}
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            />
-          </div>
-
-          {/* Bank Name */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Bank Name:</label>
-            <input
-              type="text"
-              name="bankName"
-              defaultValue={user?.bankName || ""}
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            />
-          </div>
-
-          {/* Branch Name */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label style={{ fontWeight: 600, marginBottom: "4px" }}>Branch Name:</label>
-            <input
-              type="text"
-              name="branchName"
-              defaultValue={user?.branchName || ""}
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            />
-          </div>
-
-          {/* IFSC Code */}
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            <label style={{ fontWeight: 600, marginBottom: "4px" }}>IFSC Code:</label>
-            <input
-              type="text"
-              name="ifscCode"
-              defaultValue={user?.ifscCode || ""}
-              style={{
-                padding: "8px",
-                borderRadius: "4px",
-                border: "1px solid #ccc",
-                fontSize: "14px",
-              }}
-            />
-          </div>
-
-          <button
-            type="submit"
-            style={{
-              padding: "10px 16px",
-              backgroundColor: "#0b2f5a",
-              color: "#fff",
-              fontWeight: 600,
-              borderRadius: "4px",
-              border: "none",
-              cursor: "pointer",
-              marginTop: "8px",
-            }}
-          >
-            Save Changes
-          </button>
-        </form>
-      </div>
-    )}
-
-    {/* Logout Tab Content */}
-    {profileSubTab === "logout" && (
-      <div
-        style={{
-          padding: "20px",
-          backgroundColor: "#f1f4f8",
-          borderRadius: "8px",
-          boxShadow: "0 4px 8px rgb(0 0 0 / 10%)",
-          maxWidth: "400px",
-        }}
-      >
-        {/* User info */}
-        <div style={{ marginBottom: "16px" }}>
-          <p style={{ margin: "4px 0", fontWeight: 600, color: "#0b2f5a" }}>
-            Name: {user?.fullName || "User"}
-          </p>
-          <p style={{ margin: "4px 0", fontWeight: 500, color: "#222" }}>
-            Email: {user?.email || "user@example.com"}
-          </p>
-        </div>
-
-        <p style={{ marginBottom: "16px", color: "#222" }}>
-          Are you sure you want to logout?
-        </p>
-
-        <button
-          onClick={() => {
-            localStorage.removeItem("userData");
-            navigate("/login");
-          }}
-          style={{
-            padding: "10px 16px",
-            backgroundColor: "#f7941e",
-            color: "#fff",
-            fontWeight: 600,
-            borderRadius: "4px",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          Confirm Logout
-        </button>
-      </div>
-    )}
-  </section>
-)}
-
-        {activeTab === "withdrawal" && (
-          <section
-            style={{
-              padding: "20px",
-              backgroundColor: "#f9fafc",
-              borderRadius: "8px",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-              maxWidth: "500px",
-              margin: "20px auto",
-              textAlign: "center",
-            }}
-          >
-            <h2 style={{ color: "#0b2f5a", marginBottom: "16px" }}>Withdrawal Request</h2>
-
-            <p style={{ marginBottom: "16px", color: "#333" }}>
-              Enter your UPI ID below to simulate a withdrawal request.
-            </p>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const upi = e.target.upi.value.trim();
-                if (!upi) {
-                  alert("Please enter your UPI ID!");
-                  return;
-                }
-
-                const randomAmount = (Math.random() * (500 - 50) + 50).toFixed(2);
-                alert(
-                  `Withdrawal request of ₹${randomAmount} received for UPI ID: ${upi}\n\nNote: This is a demo — no actual transaction will be made.`
-                );
-              }}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                alignItems: "center",
-              }}
-            >
-              <input
-                type="text"
-                name="upi"
-                placeholder="Enter your UPI ID (e.g., name@upi)"
-                style={{
-                  padding: "10px",
-                  width: "100%",
-                  maxWidth: "300px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontSize: "14px",
-                }}
-              />
-              <button
-                type="submit"
-                style={{
-                  backgroundColor: "#0b2f5a",
-                  color: "white",
-                  fontWeight: 600,
-                  borderRadius: "4px",
-                  padding: "10px 16px",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
-                Withdraw Now
-              </button>
-            </form>
-          </section>
+          <ProfileTab
+            user={user}
+            profileSubTab={profileSubTab}
+            setProfileSubTab={setProfileSubTab}
+            setUser={setUser}
+            apiBase={apiBase}
+            onLogout={handleLogout}
+          />
         )}
+
+        {activeTab === "withdrawal" && <WithdrawalTab />}
       </div>
     </div>
   );
