@@ -273,23 +273,25 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
         style={{
           display: "flex",
           flexDirection: isMobile ? "column" : "row",
-          gap: "20px",
+          gap: isMobile ? "0" : "20px", // Remove gap on mobile since we're using marginBottom
           padding: isMobile ? "10px" : "20px",
           height: isMobile ? "auto" : "calc(100vh - 180px)",
-          overflow: "hidden",
+          overflow: isMobile ? "visible" : "hidden", // Allow scrolling on mobile
         }}
       >
         {/* Left Section - Resume Viewer */}
       <div
         style={{
-          flex: isMobile ? "1" : "1",
+          flex: isMobile ? "0 0 auto" : "1",
           minWidth: isMobile ? "100%" : "50%",
+          height: isMobile ? "500px" : "auto", // Fixed height on mobile for better viewing
           display: "flex",
           flexDirection: "column",
           backgroundColor: "#fff",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           overflow: "hidden",
+          marginBottom: isMobile ? "20px" : "0", // Add spacing between resume and form on mobile
         }}
       >
         {/* Resume Header */}
@@ -303,9 +305,16 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
             alignItems: "center",
           }}
         >
-          <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>
-            Resume {currentResumeIndex + 1} of {resumes.length}
-          </h3>
+          <div>
+            <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>
+              Resume {currentResumeIndex + 1} of {resumes.length}
+            </h3>
+            {isMobile && (
+              <p style={{ margin: "5px 0 0 0", fontSize: "12px", opacity: 0.9 }}>
+                📱 View resume above, fill form below
+              </p>
+            )}
+          </div>
           <div style={{ display: "flex", gap: "10px" }}>
             <button
               onClick={handlePreviousResume}
@@ -365,7 +374,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
                 style={{
                   width: "100%",
                   height: "100%",
-                  minHeight: "600px",
+                  minHeight: isMobile ? "400px" : "600px", // Smaller height on mobile
                   border: "none",
                   borderRadius: "4px",
                 }}
@@ -517,7 +526,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
       {/* Right Section - Data Entry Form */}
       <div
         style={{
-          flex: isMobile ? "1" : "1",
+          flex: "1",
           minWidth: isMobile ? "100%" : "50%",
           display: "flex",
           flexDirection: "column",
