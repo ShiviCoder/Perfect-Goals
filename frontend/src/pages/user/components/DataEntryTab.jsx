@@ -239,6 +239,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
+    setPdfLoadError(false);
   };
 
   // Show list view or work view based on mode
@@ -398,10 +399,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
               <Document
                 key={`pdf-${currentResumeIndex}`}
                 file={currentPdfUrl}
-                onLoadSuccess={(pdf) => {
-                  onDocumentLoadSuccess(pdf);
-                  setPdfLoadError(false);
-                }}
+                onLoadSuccess={onDocumentLoadSuccess}
                 onLoadError={(error) => {
                   console.error("PDF load error:", error);
                   console.error("Failed URL:", currentPdfUrl);
