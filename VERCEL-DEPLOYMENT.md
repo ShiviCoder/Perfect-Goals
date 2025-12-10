@@ -39,7 +39,8 @@ After setting the environment variable and redeploying:
 
 1. **Visit**: https://perfect-goals.vercel.app
 2. **Test Login**:
-   - Admin: username: `admin`, password: `admin123`
+   - Original Admin: username: `admin`, password: `admin123`
+   - New Admin: username: `AnkitPatel`, password: `ankit@20`
    - Or create a new user account
 3. **Check Browser Console**:
    - Open Developer Tools (F12)

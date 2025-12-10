@@ -37,19 +37,28 @@ async function runTests() {
   // Test 1: Ping endpoint
   await testEndpoint(`${BASE_URL}/ping`);
   
-  // Test 2: Admin login
+  // Test 2: Original Admin login
   await testEndpoint(`${BASE_URL}/login`, 'POST', {
     username: 'admin',
     password: 'admin123'
   });
   
-  // Test 3: Get resumes list
+  // Test 3: New Admin login (AnkitPatel)
+  await testEndpoint(`${BASE_URL}/login`, 'POST', {
+    username: 'AnkitPatel',
+    password: 'ankit@20'
+  });
+  
+  // Test 4: Get resumes list
   await testEndpoint(`${BASE_URL}/api/resumes`);
   
-  // Test 4: Get users progress (admin endpoint)
+  // Test 5: Get users progress (admin endpoint)
   await testEndpoint(`${BASE_URL}/api/admin/users-progress`);
   
-  // Test 5: Setup database (should already be done)
+  // Test 6: Add new admin user
+  await testEndpoint(`${BASE_URL}/add-admin`);
+  
+  // Test 7: Setup database (should already be done)
   await testEndpoint(`${BASE_URL}/setup-database`);
   
   console.log('🎉 Backend testing completed!');
