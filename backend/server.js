@@ -38,6 +38,25 @@ app.get("/ping", (req, res) => {
   res.json({ message: "pong", env: process.env.NODE_ENV });
 });
 
+// Add new admin user endpoint
+app.get("/add-admin", async (req, res) => {
+  try {
+    await db.query(`
+      INSERT INTO admins (username, password, role) 
+      VALUES ('AnkitPatel', 'ankit@20', 'admin')
+      ON CONFLICT (username) DO NOTHING
+    `);
+
+    res.json({ 
+      message: "✅ Admin user 'AnkitPatel' added successfully!",
+      username: "AnkitPatel"
+    });
+  } catch (err) {
+    console.error("Add admin error:", err);
+    res.status(500).json({ error: "Failed to add admin user", details: err.message });
+  }
+});
+
 // Setup database tables endpoint
 app.get("/setup-database", async (req, res) => {
   try {
@@ -55,6 +74,12 @@ app.get("/setup-database", async (req, res) => {
     await db.query(`
       INSERT INTO admins (username, password, role) 
       VALUES ('admin', 'admin123', 'admin')
+      ON CONFLICT (username) DO NOTHING
+    `);
+
+    await db.query(`
+      INSERT INTO admins (username, password, role) 
+      VALUES ('AnkitPatel', 'ankit@20', 'admin')
       ON CONFLICT (username) DO NOTHING
     `);
 
