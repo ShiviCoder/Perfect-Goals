@@ -12,7 +12,12 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const res = await fetch('/login', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      console.log('🔍 VITE_API_URL:', import.meta.env.VITE_API_URL);
+      console.log('🔍 Final API URL:', apiUrl);
+      console.log('🔍 Login URL:', `${apiUrl}/login`);
+      
+      const res = await fetch(`${apiUrl}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
