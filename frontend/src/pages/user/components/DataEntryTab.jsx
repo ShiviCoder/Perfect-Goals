@@ -13,6 +13,9 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
   const [viewMode, setViewMode] = useState("list"); // "list" or "work"
+  
+  // Debug mobile detection
+  console.log("📱 DataEntryTab - isMobile:", isMobile);
   const [resumes, setResumes] = useState([]);
   const [currentResumeIndex, setCurrentResumeIndex] = useState(0);
   const [currentPdfUrl, setCurrentPdfUrl] = useState(null);
@@ -310,8 +313,8 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
               Resume {currentResumeIndex + 1} of {resumes.length}
             </h3>
             {isMobile && (
-              <p style={{ margin: "5px 0 0 0", fontSize: "12px", opacity: 0.9 }}>
-                📱 View resume above, fill form below
+              <p style={{ margin: "5px 0 0 0", fontSize: "12px", opacity: 0.9, backgroundColor: "rgba(255,255,255,0.1)", padding: "4px 8px", borderRadius: "4px" }}>
+                📱 Mobile View: Resume above, form below
               </p>
             )}
           </div>
