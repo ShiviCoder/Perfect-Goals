@@ -6,7 +6,7 @@ start cmd /k "cd backend && npm start"
 timeout /t 3
 echo.
 echo Starting Frontend...
-start cmd /k "npm run dev"
+start cmd /k "cd frontend && npm run dev"
 echo.
 echo Both servers are starting...
 echo Backend: http://localhost:5000
