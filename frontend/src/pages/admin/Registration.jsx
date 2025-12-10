@@ -13,6 +13,7 @@ const Registration = ({ onSuccess }) => {
   const [generatedUser, setGeneratedUser] = useState(null);
   const [pdfBlob, setPdfBlob] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   const navigate = useNavigate();
 
@@ -30,6 +31,36 @@ const Registration = ({ onSuccess }) => {
   
   // Generate a unique submission ID to prevent duplicates
   const [submissionId] = useState(() => Date.now() + Math.random());
+
+  // Generate copyable message for sending to user
+  const generateUserMessage = (username, password) => {
+    return `Registration Successful!
+Customer Login URL: https://perfect-goals.vercel.app
+Reg. ID: ${username}
+Password: ${password}
+
+Please use these credentials to login and start your work.`;
+  };
+
+  // Copy message to clipboard
+  const copyToClipboard = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
 
   const generatePassword = () => {
     const chars = "0123456789";
@@ -142,6 +173,7 @@ const Registration = ({ onSuccess }) => {
     setEmail("");
     setDob("");
     setAddress("");
+    setCopySuccess(false);
   };
 
   const styles = {
@@ -355,6 +387,42 @@ const Registration = ({ onSuccess }) => {
               <div style={{ marginTop: "15px", padding: "10px", backgroundColor: "#fff3cd", border: "1px solid #ffeaa7", borderRadius: "5px", fontSize: "14px", color: "#856404" }}>
                 <strong>📝 Note:</strong> Please save these credentials. The user will need them to login.
               </div>
+            </div>
+            
+            {/* Copyable Message Section */}
+            <div style={{ marginTop: "20px", padding: "15px", backgroundColor: "#e7f3ff", border: "2px solid #007bff", borderRadius: "8px" }}>
+              <div style={{ marginBottom: "10px" }}>
+                <strong style={{ color: "#004a8f", fontSize: "16px" }}>📱 Message to Send to User:</strong>
+              </div>
+              <div style={{ 
+                backgroundColor: "#f8f9fa", 
+                border: "1px solid #dee2e6", 
+                borderRadius: "5px", 
+                padding: "12px", 
+                fontFamily: "monospace", 
+                fontSize: "14px", 
+                lineHeight: "1.5",
+                whiteSpace: "pre-line",
+                color: "#495057"
+              }}>
+                {generateUserMessage(generatedUser.username, generatedUser.password)}
+              </div>
+              <button 
+                style={{
+                  marginTop: "10px",
+                  backgroundColor: copySuccess ? "#28a745" : "#007bff",
+                  color: "white",
+                  border: "none",
+                  padding: "8px 16px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: "600"
+                }}
+                onClick={() => copyToClipboard(generateUserMessage(generatedUser.username, generatedUser.password))}
+              >
+                {copySuccess ? "✅ Copied!" : "📋 Copy Message"}
+              </button>
             </div>
             <button style={{ ...styles.button, marginTop: "20px", fontSize: "16px", padding: "15px" }} onClick={handleOk}>
               ✅ OK - Add Another User
