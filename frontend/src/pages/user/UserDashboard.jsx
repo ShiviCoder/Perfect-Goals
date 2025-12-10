@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { pdfjs } from "react-pdf";
 import "pdfjs-dist/legacy/build/pdf.worker.entry"; // just import, no default
 import { PDFDocument, rgb } from "pdf-lib";
-import "../styles/responsive.css";
+import "../../styles/responsive.css";
 import Sidebar from "./components/Sidebar";
 import TopNavbar from "./components/TopNavbar";
 import DashboardTab from "./components/DashboardTab";
@@ -386,7 +386,7 @@ useEffect(() => {
   const handleTabClick = (tabName) => {
     setActiveTab(tabName);
     // Close sidebar automatically on mobile (using window width)
-    if (window.innerWidth <= 768) {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
       setIsSidebarOpen(false);
     }
   };
@@ -424,7 +424,7 @@ useEffect(() => {
         onProfileSelect={handleProfileSelect}
       />
 
-      {window.innerWidth <= 768 && isSidebarOpen && (
+      {typeof window !== 'undefined' && window.innerWidth <= 768 && isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
           style={{

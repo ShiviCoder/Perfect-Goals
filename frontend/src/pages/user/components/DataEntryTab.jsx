@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import '../../styles/responsive.css';
+import '../../../styles/responsive.css';
 import ComprehensiveDataEntryForm from "./ComprehensiveDataEntryForm";
 import ResumeListView from "./ResumeListView";
 
@@ -416,7 +416,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
                     <Page
                       key={`page_${currentResumeIndex}_${index + 1}`}
                       pageNumber={index + 1}
-                      width={Math.min(window.innerWidth - 40, 600)}
+                      width={typeof window !== 'undefined' ? Math.min(window.innerWidth - 40, 600) : 600}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                       onLoadError={(error) => {

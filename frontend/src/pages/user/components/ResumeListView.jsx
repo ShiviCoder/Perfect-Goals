@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "../../styles/responsive.css";
+import "../../../styles/responsive.css";
 
 const ResumeListView = ({ userId, apiBase, onStartWork }) => {
   const [resumes, setResumes] = useState([]);
