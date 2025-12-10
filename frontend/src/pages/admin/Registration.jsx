@@ -114,12 +114,8 @@ const Registration = ({ onSuccess }) => {
         setGeneratedUser({ fullName, username, password });
         console.log("🎉 User registration completed successfully!");
         
-        // Call onSuccess callback if provided
-        if (onSuccess) {
-          setTimeout(() => {
-            onSuccess();
-          }, 2000); // Give user time to see the success message
-        }
+        // Don't auto-close the modal - let admin click OK when ready
+        // The onSuccess callback will be called when admin clicks OK button
       } else {
         alert(result.message);
       }
@@ -133,7 +129,19 @@ const Registration = ({ onSuccess }) => {
   };
 
   const handleOk = () => {
-    navigate("/login");
+    // Call onSuccess callback to close modal and refresh users list
+    if (onSuccess) {
+      onSuccess();
+    }
+    // Stay in admin dashboard - don't navigate to login
+    // Reset form for next registration
+    setGeneratedUser(null);
+    setFullName("");
+    setContactNumber("");
+    setAlternateNumber("");
+    setEmail("");
+    setDob("");
+    setAddress("");
   };
 
   const styles = {
@@ -325,17 +333,31 @@ const Registration = ({ onSuccess }) => {
           </form>
         ) : (
           <div>
-            <h3>🎉 Registration Successful!</h3>
-            <div style={styles.credentialsBox}>
-              <div style={styles.credItem}>
-                <strong>Username:</strong> {generatedUser.username}
+            <h3 style={{ color: "#28a745", marginBottom: "20px" }}>🎉 Registration Successful!</h3>
+            <div style={{ ...styles.credentialsBox, backgroundColor: "#f8f9fa", border: "2px solid #28a745" }}>
+              <div style={{ marginBottom: "15px", textAlign: "center" }}>
+                <strong style={{ color: "#004a8f", fontSize: "16px" }}>
+                  User: {generatedUser.fullName}
+                </strong>
               </div>
-              <div style={styles.credItem}>
-                <strong>Password:</strong> {generatedUser.password}
+              <div style={{ ...styles.credItem, fontSize: "16px", padding: "10px", backgroundColor: "#e9ecef", borderRadius: "5px", marginBottom: "10px" }}>
+                <strong>Username:</strong> 
+                <span style={{ marginLeft: "10px", fontFamily: "monospace", fontSize: "18px", color: "#007bff" }}>
+                  {generatedUser.username}
+                </span>
+              </div>
+              <div style={{ ...styles.credItem, fontSize: "16px", padding: "10px", backgroundColor: "#e9ecef", borderRadius: "5px" }}>
+                <strong>Password:</strong> 
+                <span style={{ marginLeft: "10px", fontFamily: "monospace", fontSize: "18px", color: "#007bff" }}>
+                  {generatedUser.password}
+                </span>
+              </div>
+              <div style={{ marginTop: "15px", padding: "10px", backgroundColor: "#fff3cd", border: "1px solid #ffeaa7", borderRadius: "5px", fontSize: "14px", color: "#856404" }}>
+                <strong>📝 Note:</strong> Please save these credentials. The user will need them to login.
               </div>
             </div>
-            <button style={styles.button} onClick={handleOk}>
-              OK
+            <button style={{ ...styles.button, marginTop: "20px", fontSize: "16px", padding: "15px" }} onClick={handleOk}>
+              ✅ OK - Add Another User
             </button>
           </div>
         )}
