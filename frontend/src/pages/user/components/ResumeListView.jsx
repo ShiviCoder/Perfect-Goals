@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import "../../styles/responsive.css";
 
 const ResumeListView = ({ userId, apiBase, onStartWork }) => {
   const [resumes, setResumes] = useState([]);
@@ -66,37 +67,25 @@ const ResumeListView = ({ userId, apiBase, onStartWork }) => {
   }
 
   return (
-    <div style={{ padding: "20px", backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-        <h2 style={{ color: "#0b2f5a", marginBottom: "20px", fontSize: "24px", fontWeight: "bold" }}>
+    <div className="resume-list-container" style={{ backgroundColor: "#f5f5f5", minHeight: "100vh" }}>
+      <div className="container">
+        <h2 className="heading-responsive" style={{ color: "#0b2f5a", marginBottom: "20px", fontWeight: "bold" }}>
           📋 Resume Data Entry Tasks
         </h2>
         
         {/* Warning Message */}
-        <div style={{
-          backgroundColor: "#fff3cd",
-          border: "2px solid #ffc107",
-          borderRadius: "8px",
-          padding: "15px 20px",
-          marginBottom: "20px",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-        }}>
-          <span style={{ fontSize: "24px" }}>⚠️</span>
-          <p style={{ margin: 0, color: "#856404", fontSize: "15px", fontWeight: "500", lineHeight: "1.5" }}>
-            <strong>Important:</strong> Please fill these forms according to the given resume, otherwise your accuracy will be reduced.
-          </p>
+        <div className="resume-list-instruction">
+          <span style={{ fontSize: "24px", marginRight: "12px" }}>⚠️</span>
+          <strong>Important:</strong> Please fill these forms according to the given resume, otherwise your accuracy will be reduced.
         </div>
 
-        <p style={{ marginBottom: "20px", color: "#666" }}>
+        <p className="text-responsive" style={{ marginBottom: "20px", color: "#666" }}>
           Total Resumes: <strong>{resumes.length}</strong>
         </p>
 
         {/* Table */}
-        <div style={{ backgroundColor: "#fff", borderRadius: "8px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div className="resume-table-container">
+          <table className="resume-table">
             <thead>
               <tr style={{ backgroundColor: "#d32f2f", color: "white" }}>
                 <th style={{ padding: "15px", textAlign: "left", fontSize: "16px", fontWeight: "600", borderRight: "1px solid rgba(255,255,255,0.2)" }}>

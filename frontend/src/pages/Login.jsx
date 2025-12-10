@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import "../styles/responsive.css";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -62,21 +63,21 @@ const Login = () => {
       alignItems: "center",
       background: "linear-gradient(135deg, #004a8f, #0066cc)",
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-      padding: "20px",
+      padding: "clamp(10px, 5vw, 20px)",
     },
     container: {
       background: "#fff",
       width: "100%",
       maxWidth: "400px",
-      padding: "30px 25px",
+      padding: "clamp(20px, 5vw, 30px) clamp(15px, 4vw, 25px)",
       boxShadow: "0 8px 20px rgba(0,0,0,0.2)",
       borderRadius: "10px",
       textAlign: "center",
     },
     heading: {
-      fontSize: "26px",
+      fontSize: "clamp(22px, 5vw, 26px)",
       color: "#004a8f",
-      marginBottom: "25px",
+      marginBottom: "clamp(15px, 4vw, 25px)",
       fontWeight: "700",
     },
     inputGroup: {
@@ -92,21 +93,22 @@ const Login = () => {
     },
     input: {
       width: "100%",
-      padding: "12px",
+      padding: "clamp(10px, 2.5vw, 12px)",
       borderRadius: "6px",
       border: "1px solid #ccc",
-      fontSize: "14px",
+      fontSize: "clamp(14px, 2.5vw, 16px)",
       outline: "none",
       transition: "border-color 0.3s ease",
+      boxSizing: "border-box",
     },
     button: {
-      marginTop: "10px",
+      marginTop: "clamp(8px, 2vw, 10px)",
       backgroundColor: "#ffa600",
       border: "none",
       borderRadius: "6px",
-      padding: "12px 10px",
+      padding: "clamp(10px, 2.5vw, 12px) clamp(8px, 2vw, 10px)",
       color: "white",
-      fontSize: "16px",
+      fontSize: "clamp(14px, 3vw, 16px)",
       cursor: "pointer",
       fontWeight: 600,
       width: "100%",
@@ -165,13 +167,6 @@ const Login = () => {
             {loading ? "Loading..." : "Login"}
           </button>
         </form>
-
-        <p style={styles.footer}>
-          Don’t have an account?{" "}
-          <a href="/register" style={styles.link}>
-            Register here
-          </a>
-        </p>
       </div>
     </div>
   );

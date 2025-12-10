@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import '../../styles/responsive.css';
 import ComprehensiveDataEntryForm from "./ComprehensiveDataEntryForm";
 import ResumeListView from "./ResumeListView";
 
@@ -11,11 +12,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url
 ).toString();
 
-const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
+const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
   const [viewMode, setViewMode] = useState("list"); // "list" or "work"
-  
-  // Debug mobile detection
-  console.log("📱 DataEntryTab - isMobile:", isMobile);
   const [resumes, setResumes] = useState([]);
   const [currentResumeIndex, setCurrentResumeIndex] = useState(0);
   const [currentPdfUrl, setCurrentPdfUrl] = useState(null);
@@ -273,28 +271,30 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
       </div>
 
       <section
+        className="data-entry-container"
         style={{
           display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          gap: isMobile ? "0" : "20px", // Remove gap on mobile since we're using marginBottom
-          padding: isMobile ? "10px" : "20px",
-          height: isMobile ? "auto" : "calc(100vh - 180px)",
-          overflow: isMobile ? "visible" : "hidden", // Allow scrolling on mobile
+          flexDirection: "column",
+          gap: "20px",
+          padding: "10px",
+          minHeight: "calc(100vh - 180px)",
+          overflow: "visible",
         }}
       >
-        {/* Left Section - Resume Viewer */}
+        {/* Resume Viewer Section */}
       <div
+        className="resume-viewer-section"
         style={{
-          flex: isMobile ? "0 0 auto" : "1",
-          minWidth: isMobile ? "100%" : "50%",
-          height: isMobile ? "500px" : "auto", // Fixed height on mobile for better viewing
+          flex: "0 0 auto",
+          width: "100%",
+          height: "500px",
           display: "flex",
           flexDirection: "column",
           backgroundColor: "#fff",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           overflow: "hidden",
-          marginBottom: isMobile ? "20px" : "0", // Add spacing between resume and form on mobile
+          marginBottom: "20px",
         }}
       >
         {/* Resume Header */}
@@ -312,11 +312,9 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
             <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 600 }}>
               Resume {currentResumeIndex + 1} of {resumes.length}
             </h3>
-            {isMobile && (
-              <p style={{ margin: "5px 0 0 0", fontSize: "12px", opacity: 0.9, backgroundColor: "rgba(255,255,255,0.1)", padding: "4px 8px", borderRadius: "4px" }}>
-                📱 Mobile View: Resume above, form below
-              </p>
-            )}
+            <p className="mobile-only" style={{ margin: "5px 0 0 0", fontSize: "12px", opacity: 0.9, backgroundColor: "rgba(255,255,255,0.1)", padding: "4px 8px", borderRadius: "4px" }}>
+              📱 View resume above, fill form below
+            </p>
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
             <button
@@ -377,7 +375,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
                 style={{
                   width: "100%",
                   height: "100%",
-                  minHeight: isMobile ? "400px" : "600px", // Smaller height on mobile
+                  minHeight: "400px",
                   border: "none",
                   borderRadius: "4px",
                 }}
@@ -418,7 +416,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
                     <Page
                       key={`page_${currentResumeIndex}_${index + 1}`}
                       pageNumber={index + 1}
-                      width={isMobile ? 400 : 600}
+                      width={Math.min(window.innerWidth - 40, 600)}
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                       onLoadError={(error) => {
@@ -526,11 +524,12 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete, isMobile }) => {
         </div>
       </div>
 
-      {/* Right Section - Data Entry Form */}
+      {/* Data Entry Form Section */}
       <div
+        className="form-section"
         style={{
           flex: "1",
-          minWidth: isMobile ? "100%" : "50%",
+          width: "100%",
           display: "flex",
           flexDirection: "column",
           backgroundColor: "#fff",

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Document, Page } from "react-pdf";
+import "../../styles/responsive.css";
 
 const Registration = ({ onSuccess }) => {
   const [fullName, setFullName] = useState("");

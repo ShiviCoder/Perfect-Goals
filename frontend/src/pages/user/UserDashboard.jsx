@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { pdfjs } from "react-pdf";
 import "pdfjs-dist/legacy/build/pdf.worker.entry"; // just import, no default
 import { PDFDocument, rgb } from "pdf-lib";
+import "../styles/responsive.css";
 import Sidebar from "./components/Sidebar";
 import TopNavbar from "./components/TopNavbar";
 import DashboardTab from "./components/DashboardTab";
@@ -31,7 +32,6 @@ const UserDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [profileSubTab, setProfileSubTab] = useState(null); // sub nav
   const [signatureFile, setSignatureFile] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
@@ -385,8 +385,8 @@ useEffect(() => {
 
   const handleTabClick = (tabName) => {
     setActiveTab(tabName);
-    // Close sidebar automatically if mobile
-    if (isMobile) {
+    // Close sidebar automatically on mobile (using window width)
+    if (window.innerWidth <= 768) {
       setIsSidebarOpen(false);
     }
   };
@@ -421,11 +421,10 @@ useEffect(() => {
         activeTab={activeTab}
         onTabClick={handleTabClick}
         isSidebarOpen={isSidebarOpen}
-        isMobile={isMobile}
         onProfileSelect={handleProfileSelect}
       />
 
-      {isMobile && isSidebarOpen && (
+      {window.innerWidth <= 768 && isSidebarOpen && (
         <div
           onClick={() => setIsSidebarOpen(false)}
           style={{
@@ -445,7 +444,6 @@ useEffect(() => {
         <TopNavbar
           styles={styles}
           submissionStatus={submissionStatus}
-          isMobile={isMobile}
           user={user}
           onOpenSidebar={() => setIsSidebarOpen(true)}
         />
@@ -454,7 +452,6 @@ useEffect(() => {
           <DashboardTab
             progress={progress}
             submissionStatus={submissionStatus}
-            isMobile={isMobile}
           />
         )}
 
@@ -463,7 +460,6 @@ useEffect(() => {
             userId={user_id}
             apiBase={apiBase}
             onEntryComplete={handleEntryComplete}
-            isMobile={isMobile}
           />
         )}
 
