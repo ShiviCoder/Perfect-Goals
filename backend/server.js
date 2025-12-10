@@ -39,12 +39,13 @@ app.get("/ping", (req, res) => {
 });
 
 // PostgreSQL Connection with environment variables
+console.log("🔍 Environment check:");
+console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("DATABASE_URL (first 50 chars):", process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 50) + "..." : "NOT SET");
+
 const db = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME || "perfectgoal",
-  port: process.env.DB_PORT || 5432,
+  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'perfectgoal'}`,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
@@ -55,6 +56,7 @@ db.connect()
   })
   .catch((err) => {
     console.error("❌ PostgreSQL connection failed:", err);
+    console.log("🔍 Connection string being used:", process.env.DATABASE_URL ? "DATABASE_URL" : "fallback localhost");
     process.exit(1);
   });
 
