@@ -6,6 +6,8 @@ import ResumeListView from "./ResumeListView";
 // Using simple iframe approach - no pdfjs worker needed
 
 const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
+  console.log("🚀 DataEntryTab component initializing...", { userId, apiBase });
+  
   const [viewMode, setViewMode] = useState("list"); // "list" or "work"
   const [resumes, setResumes] = useState([]);
   const [currentResumeIndex, setCurrentResumeIndex] = useState(0);
@@ -112,11 +114,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
       const pdfUrl = `${apiBase}/api/resumes/${resumeId}/pdf`;
       console.log(`📄 Loading resume ${resumeId} (Index: ${currentResumeIndex}) from: ${pdfUrl}`);
       setCurrentPdfUrl(pdfUrl);
-      // Reset states when changing resume
-      setNumPages(null);
-      setPdfLoadError(false);
-      // Keep iframe as default for stability
-      // setUseIframeFallback(false);
+      // Using simple iframe approach - no state resets needed
     } else {
       console.log(`⚠️ Cannot load resume. Resumes length: ${resumes.length}, Current index: ${currentResumeIndex}`);
     }
@@ -228,12 +226,21 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
 
   // Show list view or work view based on mode
   if (viewMode === "list") {
-    return <ResumeListView userId={userId} apiBase={apiBase} onStartWork={handleStartWork} key={viewMode} />;
+    console.log("📋 Rendering ResumeListView...");
+    try {
+      return <ResumeListView userId={userId} apiBase={apiBase} onStartWork={handleStartWork} key={viewMode} />;
+    } catch (error) {
+      console.error("❌ Error rendering ResumeListView:", error);
+      return <div>Error loading resume list. Please refresh the page.</div>;
+    }
   }
 
-  return (
-    <>
-      {/* Back to List Button */}
+  console.log("🔧 Rendering work view...", { currentResumeIndex, currentPdfUrl });
+  
+  try {
+    return (
+      <>
+        {/* Back to List Button */}
       <div style={{ padding: "10px 20px", backgroundColor: "#f5f5f5", borderBottom: "2px solid #e0e0e0" }}>
         <button
           onClick={handleBackToList}
@@ -420,6 +427,16 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
     </section>
     </>
   );
+  } catch (error) {
+    console.error("❌ Error rendering DataEntryTab work view:", error);
+    return (
+      <div style={{ padding: "20px", textAlign: "center" }}>
+        <h3>Something went wrong</h3>
+        <p>Error: {error.message}</p>
+        <button onClick={() => window.location.reload()}>Refresh Page</button>
+      </div>
+    );
+  }
 };
 
 export default DataEntryTab;
