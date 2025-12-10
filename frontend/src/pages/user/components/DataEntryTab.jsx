@@ -1,32 +1,19 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Document, Page, pdfjs } from "react-pdf";
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
+import React, { useState, useEffect } from "react";
 import '../../../styles/responsive.css';
 import ComprehensiveDataEntryForm from "./ComprehensiveDataEntryForm";
 import ResumeListView from "./ResumeListView";
 
-// Configure pdfjs worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/legacy/build/pdf.worker.entry',
-  import.meta.url
-).toString();
+// Using simple iframe approach - no pdfjs worker needed
 
 const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
   const [viewMode, setViewMode] = useState("list"); // "list" or "work"
   const [resumes, setResumes] = useState([]);
   const [currentResumeIndex, setCurrentResumeIndex] = useState(0);
   const [currentPdfUrl, setCurrentPdfUrl] = useState(null);
-  const [numPages, setNumPages] = useState(null);
-  const [pdfLoadError, setPdfLoadError] = useState(false);
-  const [useIframeFallback, setUseIframeFallback] = useState(true); // Use iframe by default for stability
+  // Removed numPages - using iframe approach
+  // Removed PDF error handling states - always show iframe
   
-  // Memoize PDF options to prevent unnecessary reloads
-  const pdfOptions = useMemo(() => ({
-    cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/",
-    cMapPacked: true,
-    standardFontDataUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/",
-  }), []);
+  // Removed PDF options - using simple iframe approach
   
   const handleStartWork = (resumeIndex) => {
     setCurrentResumeIndex(resumeIndex);
@@ -237,9 +224,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
     }
   };
 
-  const onDocumentLoadSuccess = ({ numPages }) => {
-    setNumPages(numPages);
-  };
+  // Removed onDocumentLoadSuccess - using iframe approach
 
   // Show list view or work view based on mode
   if (viewMode === "list") {
@@ -367,160 +352,24 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
             alignItems: "flex-start",
           }}
         >
-          {currentPdfUrl ? (
-            useIframeFallback ? (
-              // Fallback: Use iframe to display PDF
-              <iframe
-                src={currentPdfUrl}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  minHeight: "400px",
-                  border: "none",
-                  borderRadius: "4px",
-                }}
-                title={`Resume ${currentResumeIndex + 1}`}
-                onError={() => {
-                  console.error("Iframe failed to load PDF");
-                  setPdfLoadError(true);
-                }}
-              />
-            ) : (
-              <Document
-                key={`pdf-${currentResumeIndex}`}
-                file={currentPdfUrl}
-                onLoadSuccess={(pdf) => {
-                  onDocumentLoadSuccess(pdf);
-                  setPdfLoadError(false);
-                }}
-                onLoadError={(error) => {
-                  console.error("PDF load error:", error);
-                  console.error("Failed URL:", currentPdfUrl);
-                  console.error("Error details:", error.message);
-                  setPdfLoadError(true);
-                  // Try iframe fallback after a short delay
-                  setTimeout(() => {
-                    setUseIframeFallback(true);
-                  }, 1000);
-                }}
-                loading={
-                  <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-                    <div style={{ fontSize: "24px", marginBottom: "10px" }}>⏳</div>
-                    Loading PDF...
-                  </div>
-                }
-                options={pdfOptions}
-              >
-                {numPages ? (
-                  Array.from(new Array(numPages), (el, index) => (
-                    <Page
-                      key={`page_${currentResumeIndex}_${index + 1}`}
-                      pageNumber={index + 1}
-                      width={typeof window !== 'undefined' ? Math.min(window.innerWidth - 40, 600) : 600}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
-                      onLoadError={(error) => {
-                        console.error(`Error loading page ${index + 1}:`, error);
-                      }}
-                    />
-                  ))
-                ) : (
-                  <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-                    <div style={{ fontSize: "24px", marginBottom: "10px" }}>⏳</div>
-                    Loading pages...
-                  </div>
-                )}
-              </Document>
-            )
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "100%",
-                color: "#666",
-                textAlign: "center",
-                padding: "40px",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: "48px",
-                  marginBottom: "20px",
-                }}
-              >
-                📄
-              </div>
-              <h3 style={{ margin: "0 0 10px 0", color: "#333" }}>
-                Resume {currentResumeIndex + 1}
-              </h3>
-              {pdfLoadError ? (
-                <div>
-                  <p style={{ margin: "0 0 15px 0", color: "#d32f2f", lineHeight: "1.6" }}>
-                    <strong>Failed to load PDF</strong>
-                  </p>
-                  <div style={{ marginBottom: "15px" }}>
-                    <button
-                      onClick={() => {
-                        setUseIframeFallback(true);
-                        setPdfLoadError(false);
-                      }}
-                      style={{
-                        padding: "8px 16px",
-                        backgroundColor: "#0b2f5a",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        marginRight: "10px",
-                      }}
-                    >
-                      Try Alternative Viewer
-                    </button>
-                    <a
-                      href={currentPdfUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        padding: "8px 16px",
-                        backgroundColor: "#f7941e",
-                        color: "white",
-                        textDecoration: "none",
-                        borderRadius: "4px",
-                        display: "inline-block",
-                      }}
-                    >
-                      Open in New Tab
-                    </a>
-                  </div>
-                  <p style={{ margin: 0, color: "#666", fontSize: "12px", lineHeight: "1.6" }}>
-                    Make sure:
-                    <br />• Backend server is running on {apiBase}
-                    <br />• File exists: <code>backend/resumes/resume_{currentResumeIndex + 1}.pdf</code>
-                    <br />• Check browser console (F12) for detailed errors
-                  </p>
-                </div>
-              ) : (
-                <p style={{ margin: 0, color: "#666", lineHeight: "1.6" }}>
-                  <strong>Resume PDF not found</strong>
-                  <br />
-                  <br />
-                  Please add <code style={{ backgroundColor: "#f0f0f0", padding: "2px 6px", borderRadius: "3px" }}>
-                    resume_{currentResumeIndex + 1}.pdf
-                  </code> to the <code style={{ backgroundColor: "#f0f0f0", padding: "2px 6px", borderRadius: "3px" }}>
-                    backend/resumes/
-                  </code> folder.
-                  <br />
-                  <br />
-                  <small style={{ color: "#999" }}>
-                    See backend/resumes/README.md for instructions
-                  </small>
-                </p>
-              )}
-            </div>
-          )}
+          {/* Always show resume using iframe - no buttons, no error messages */}
+          <iframe
+            src={currentPdfUrl || `${apiBase}/api/resumes/${currentResumeIndex + 1}/pdf`}
+            style={{
+              width: "100%",
+              height: "100%",
+              minHeight: "400px",
+              border: "none",
+              borderRadius: "4px",
+            }}
+            title={`Resume ${currentResumeIndex + 1}`}
+            onLoad={() => {
+              console.log(`✅ Resume ${currentResumeIndex + 1} loaded successfully`);
+            }}
+            onError={() => {
+              console.log(`⚠️ Resume ${currentResumeIndex + 1} failed to load, but iframe is still displayed`);
+            }}
+          />
         </div>
       </div>
 
