@@ -12,8 +12,13 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      // Try multiple ways to get the API URL
+      const apiUrl = import.meta.env.VITE_API_URL || 
+                    window.location.origin.includes('vercel') ? 'https://perfect-goals.onrender.com' : 
+                    'http://localhost:5000';
+      
       console.log('🔍 VITE_API_URL:', import.meta.env.VITE_API_URL);
+      console.log('🔍 Window origin:', window.location.origin);
       console.log('🔍 Final API URL:', apiUrl);
       console.log('🔍 Login URL:', `${apiUrl}/login`);
       
