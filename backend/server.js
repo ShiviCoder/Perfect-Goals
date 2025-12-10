@@ -1,5 +1,6 @@
 import express from "express";
-import mysql from "mysql2";
+import pkg from "pg";
+const { Pool } = pkg;
 import multer from "multer";
 import dotenv from "dotenv";
 import path from "path";
@@ -37,36 +38,38 @@ app.get("/ping", (req, res) => {
   res.json({ message: "pong", env: process.env.NODE_ENV });
 });
 
-// MySQL Connection with environment variables
-const db = mysql.createConnection({
+// PostgreSQL Connection with environment variables
+const db = new Pool({
   host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
+  user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME || "perfectgoal"
+  database: process.env.DB_NAME || "perfectgoal",
+  port: process.env.DB_PORT || 5432,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Connect to database with error handling
-db.connect((err) => {
-  if (err) {
-    console.error("❌ MySQL connection failed:", err);
+// Test database connection
+db.connect()
+  .then(() => {
+    console.log("✅ PostgreSQL connected successfully!");
+  })
+  .catch((err) => {
+    console.error("❌ PostgreSQL connection failed:", err);
     process.exit(1);
-  }
-  console.log("✅ MySQL connected successfully!");
-});
-
+  });
 
 // ✅ Unified Login Route (replaces both admin-login and user login)
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   console.log("🔐 Login attempt:", username, password);
 
-  // 1️⃣ Check admin table first
-  const adminQuery = "SELECT id, username, role FROM admins WHERE username = ? AND password = ?";
-  db.query(adminQuery, [username, password], (adminErr, adminResult) => {
-    if (adminErr) return res.status(500).json({ message: "Database error", error: adminErr });
+  try {
+    // 1️⃣ Check admin table first
+    const adminQuery = "SELECT id, username, role FROM admins WHERE username = $1 AND password = $2";
+    const adminResult = await db.query(adminQuery, [username, password]);
 
-    if (adminResult.length > 0) {
-      const admin = adminResult[0];
+    if (adminResult.rows.length > 0) {
+      const admin = adminResult.rows[0];
       return res.json({
         message: "✅ Admin login successful!",
         user: {
@@ -80,94 +83,91 @@ app.post("/login", (req, res) => {
     // 2️⃣ If not admin, check userregistrations
     const userQuery = `
       SELECT 
-        id, username, fullName, email, address, contactNumber, alternateNumber, 
-        dob, accountNumber, bankName, branchName, ifscCode, access 
+        id, username, "fullName", email, address, "contactNumber", "alternateNumber", 
+        dob, "accountNumber", "bankName", "branchName", "ifscCode", access 
       FROM userregistrations 
-      WHERE username = ? AND password = ?
+      WHERE username = $1 AND password = $2
     `;
 
-    db.query(userQuery, [username, password], (userErr, userResult) => {
-      if (userErr) return res.status(500).json({ message: "Database error", error: userErr });
+    const userResult = await db.query(userQuery, [username, password]);
 
-      if (userResult.length > 0) {
-        const user = userResult[0];
-        return res.json({
-          message: "✅ User login successful!",
-          user: {
-            id: user.id,
-            username: user.username,
-            fullName: user.fullName,
-            email: user.email,
-            address: user.address,
-            contactNumber: user.contactNumber,
-            alternateNumber: user.alternateNumber,
-            dob: user.dob,
-            accountNumber: user.accountNumber,
-            bankName: user.bankName,
-            branchName: user.branchName,
-            ifscCode: user.ifscCode,
-            access: user.access,
-            role: "user",
-          },
-        });
-      }
-
-      return res.status(401).json({ message: "❌ Invalid username or password" });
-    });
-  });
-});
-
-
-//Registration API 
-app.post("/register", (req, res) => {
-  const { fullName, contactNumber, alternateNumber, email, dob, address, username, password } = req.body;
-
-  const insertUserQuery = `
-    INSERT INTO userregistrations 
-    (fullName, contactNumber, alternateNumber, email, dob, address, username, password) 
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
-
-  db.query(insertUserQuery, [fullName, contactNumber, alternateNumber, email, dob, address, username, password], (err, result) => {
-    if (err) {
-      console.error("❌ User registration error:", err);
-      return res.status(500).json({ message: "Database error", error: err });
+    if (userResult.rows.length > 0) {
+      const user = userResult.rows[0];
+      return res.json({
+        message: "✅ User login successful!",
+        user: {
+          id: user.id,
+          username: user.username,
+          fullName: user.fullName,
+          email: user.email,
+          address: user.address,
+          contactNumber: user.contactNumber,
+          alternateNumber: user.alternateNumber,
+          dob: user.dob,
+          accountNumber: user.accountNumber,
+          bankName: user.bankName,
+          branchName: user.branchName,
+          ifscCode: user.ifscCode,
+          access: user.access,
+          role: "user",
+        },
+      });
     }
 
-    const newUserId = result.insertId;
+    return res.status(401).json({ message: "❌ Invalid username or password" });
+  } catch (err) {
+    console.error("Login error:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
+});
+
+//Registration API 
+app.post("/register", async (req, res) => {
+  const { fullName, contactNumber, alternateNumber, email, dob, address, username, password } = req.body;
+
+  try {
+    const insertUserQuery = `
+      INSERT INTO userregistrations 
+      ("fullName", "contactNumber", "alternateNumber", email, dob, address, username, password) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+      RETURNING id
+    `;
+
+    const result = await db.query(insertUserQuery, [fullName, contactNumber, alternateNumber, email, dob, address, username, password]);
+    const newUserId = result.rows[0].id;
 
     // ✅ Create linked user_progress record (8-day submission window)
     const progressQuery = `
       INSERT INTO user_progress (user_id, registration_date, submission_end_date)
-      VALUES (?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 8 DAY))
+      VALUES ($1, CURRENT_DATE, CURRENT_DATE + INTERVAL '8 days')
     `;
 
-    db.query(progressQuery, [newUserId], (err2) => {
-      if (err2) {
-        console.error("⚠️ Error creating progress row:", err2);
-        return res.status(500).json({ message: "User created but progress row failed", error: err2 });
-      }
+    await db.query(progressQuery, [newUserId]);
 
-      res.json({
-        message: "✅ Registration successful!",
-        user_id: newUserId,
-      });
+    res.json({
+      message: "✅ Registration successful!",
+      user_id: newUserId,
     });
-  });
+  } catch (err) {
+    console.error("❌ User registration error:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
 });
 
 // Note: Main /api/user/:user_id endpoint is defined later (includes progress data)
 
-app.post("/api/progress/complete/:user_id", (req, res) => {
+app.post("/api/progress/complete/:user_id", async (req, res) => {
   const userId = req.params.user_id;
-  db.query(
-    "UPDATE user_progress SET completed_entries = completed_entries + 1 WHERE user_id = ?",
-    [userId],
-    (err, result) => {
-      if (err) return res.status(500).json({ error: err });
-      res.json({ message: "Progress updated" });
-    }
-  );
+  
+  try {
+    await db.query(
+      "UPDATE user_progress SET completed_entries = completed_entries + 1 WHERE user_id = $1",
+      [userId]
+    );
+    res.json({ message: "Progress updated" });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
 });
 
 // ✅ Get Resume List Endpoint
@@ -199,14 +199,10 @@ app.get("/api/resumes", (req, res) => {
 app.get("/api/resumes/:resumeId/pdf", (req, res) => {
   const resumeId = req.params.resumeId;
   
-  // Path to resume PDF file
-  // Resumes should be named: resume_1.pdf, resume_2.pdf, ..., resume_500.pdf
-  // Place them in: backend/resumes/ folder
   const resumePath = path.join(__dirname, "resumes", `resume_${resumeId}.pdf`);
   
   console.log(`📄 Attempting to serve resume ${resumeId} from: ${resumePath}`);
   
-  // Check if file exists
   if (!fs.existsSync(resumePath)) {
     console.error(`❌ Resume ${resumeId} not found at: ${resumePath}`);
     return res.status(404).json({ 
@@ -215,13 +211,11 @@ app.get("/api/resumes/:resumeId/pdf", (req, res) => {
     });
   }
   
-  // Set headers for PDF with CORS
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="resume_${resumeId}.pdf"`);
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
   
-  // Send the PDF file with error handling
   const fileStream = fs.createReadStream(resumePath);
   
   fileStream.on("error", (err) => {
@@ -239,7 +233,7 @@ app.get("/api/resumes/:resumeId/pdf", (req, res) => {
 });
 
 // ✅ Data Entry Submission Endpoint
-app.post("/api/data-entry", (req, res) => {
+app.post("/api/data-entry", async (req, res) => {
   const {
     resumeId,
     userId,
@@ -287,7 +281,6 @@ app.post("/api/data-entry", (req, res) => {
   console.log("📦 Received data:", { resumeId, userId, firstName, lastName, mobile, email });
   console.log("📦 Full request body:", req.body);
   
-  // Check if required fields exist and are not empty strings or "NA"
   const isValidField = (field) => field && field.trim() !== "" && field.trim() !== "NA";
   
   if (!resumeId || !userId || !isValidField(firstName) || !isValidField(lastName) || !isValidField(mobile) || !isValidField(email)) {
@@ -311,26 +304,26 @@ app.post("/api/data-entry", (req, res) => {
     });
   }
 
-  // Insert data entry into database
-  const query = `
-    INSERT INTO data_entries (
-      resume_id, user_id, 
-      first_name, middle_name, last_name, dob, gender, nationality, marital_status, 
-      passport, hobbies, languages_known, address, landmark, city, state, pincode, 
-      mobile, email,
-      ssc_result, ssc_board, ssc_passing_year, ssc_diploma,
-      hsc_result, hsc_board, hsc_passing_year, hsc_diploma,
-      graduation_degree, graduation_year, graduation_result, graduation_university,
-      post_graduation_degree, post_graduation_year, post_graduation_result, post_graduation_university,
-      higher_education,
-      total_experience_years, total_experience_months, total_companies_worked, last_current_employer,
-      created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-  `;
+  try {
+    // Insert data entry into database
+    const query = `
+      INSERT INTO data_entries (
+        resume_id, user_id, 
+        first_name, middle_name, last_name, dob, gender, nationality, marital_status, 
+        passport, hobbies, languages_known, address, landmark, city, state, pincode, 
+        mobile, email,
+        ssc_result, ssc_board, ssc_passing_year, ssc_diploma,
+        hsc_result, hsc_board, hsc_passing_year, hsc_diploma,
+        graduation_degree, graduation_year, graduation_result, graduation_university,
+        post_graduation_degree, post_graduation_year, post_graduation_result, post_graduation_university,
+        higher_education,
+        total_experience_years, total_experience_months, total_companies_worked, last_current_employer,
+        created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, NOW())
+      RETURNING id
+    `;
 
-  db.query(
-    query,
-    [
+    const result = await db.query(query, [
       resumeId, userId,
       firstName || "NA", middleName || "NA", lastName || "NA", dob || "NA", gender || "NA", 
       nationality || "NA", maritalStatus || "NA", passport || "NA", hobbies || "NA", 
@@ -343,81 +336,68 @@ app.post("/api/data-entry", (req, res) => {
       postGraduationUniversity || "NA", higherEducation || "NA",
       totalExperienceYears || "NA", totalExperienceMonths || "NA", totalCompaniesWorked || "NA", 
       lastCurrentEmployer || "NA"
-    ],
-    (err, result) => {
-      if (err) {
-        console.error("Data entry error:", err);
-        return res.status(500).json({ error: "Failed to save data entry", details: err.message });
-      }
+    ]);
 
-      // Update progress
-      db.query(
-        "UPDATE user_progress SET completed_entries = completed_entries + 1 WHERE user_id = ?",
-        [userId],
-        (updateErr) => {
-          if (updateErr) {
-            console.error("Progress update error:", updateErr);
-          }
-        }
-      );
+    // Update progress
+    await db.query(
+      "UPDATE user_progress SET completed_entries = completed_entries + 1 WHERE user_id = $1",
+      [userId]
+    );
 
-      res.json({ 
-        message: "Data entry saved successfully", 
-        entryId: result.insertId 
-      });
-    }
-  );
+    res.json({ 
+      message: "Data entry saved successfully", 
+      entryId: result.rows[0].id 
+    });
+  } catch (err) {
+    console.error("Data entry error:", err);
+    return res.status(500).json({ error: "Failed to save data entry", details: err.message });
+  }
 });
 
 // ✅ Get Resume Submission Status for User
-app.get("/api/resume-status/:user_id", (req, res) => {
+app.get("/api/resume-status/:user_id", async (req, res) => {
   const userId = req.params.user_id;
 
-  const query = `
-    SELECT resume_id, created_at 
-    FROM data_entries 
-    WHERE user_id = ?
-    ORDER BY resume_id
-  `;
+  try {
+    const query = `
+      SELECT resume_id, created_at 
+      FROM data_entries 
+      WHERE user_id = $1
+      ORDER BY resume_id
+    `;
 
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      console.error("Error fetching resume status:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
-
-    // Return array of submitted resume IDs
-    const submittedResumes = results.map(row => row.resume_id);
+    const result = await db.query(query, [userId]);
+    const submittedResumes = result.rows.map(row => row.resume_id);
     res.json({ submittedResumes });
-  });
+  } catch (err) {
+    console.error("Error fetching resume status:", err);
+    return res.status(500).json({ error: "Database error" });
+  }
 });
 
 // ✅ Get User Progress
-app.get("/api/progress/:user_id", (req, res) => {
+app.get("/api/progress/:user_id", async (req, res) => {
   const userId = req.params.user_id;
 
-  const query = `
-    SELECT 
-      total_entries,
-      completed_entries,
-      registration_date,
-      submission_end_date,
-      penalty
-    FROM user_progress 
-    WHERE user_id = ?
-  `;
+  try {
+    const query = `
+      SELECT 
+        total_entries,
+        completed_entries,
+        registration_date,
+        submission_end_date,
+        penalty
+      FROM user_progress 
+      WHERE user_id = $1
+    `;
 
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      console.error("Error fetching progress:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
+    const result = await db.query(query, [userId]);
 
-    if (results.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ error: "Progress not found for this user" });
     }
 
-    const progress = results[0];
+    const progress = result.rows[0];
     res.json({
       totalEntries: progress.total_entries,
       completedEntries: progress.completed_entries,
@@ -426,23 +406,26 @@ app.get("/api/progress/:user_id", (req, res) => {
       submissionEndDate: progress.submission_end_date,
       penalty: progress.penalty
     });
-  });
+  } catch (err) {
+    console.error("Error fetching progress:", err);
+    return res.status(500).json({ error: "Database error" });
+  }
 });
 
-app.post("/api/change-password/:user_id", (req, res) => {
-  const userId = req.params.user_id;          // Get user ID from URL
+app.post("/api/change-password/:user_id", async (req, res) => {
+  const userId = req.params.user_id;
   const { oldPassword, newPassword } = req.body;
 
-  // 1. Check if user exists and old password matches
-  const query = "SELECT * FROM userregistrations WHERE id = ?";
-  db.query(query, [userId], (err, results) => {
-    if (err) return res.status(500).json({ message: "Database error", error: err });
+  try {
+    // 1. Check if user exists and old password matches
+    const query = "SELECT * FROM userregistrations WHERE id = $1";
+    const result = await db.query(query, [userId]);
 
-    if (results.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const user = results[0];
+    const user = result.rows[0];
     console.log("DB password:", JSON.stringify(user.password));
     console.log("Typed old password:", JSON.stringify(oldPassword));
 
@@ -451,104 +434,101 @@ app.post("/api/change-password/:user_id", (req, res) => {
     }
 
     // 2. Update password
-    const updateQuery = "UPDATE userregistrations SET password = ? WHERE id = ?";
-    db.query(updateQuery, [newPassword, userId], (updateErr) => {
-      if (updateErr) return res.status(500).json({ message: "Error updating password", error: updateErr });
+    const updateQuery = "UPDATE userregistrations SET password = $1 WHERE id = $2";
+    await db.query(updateQuery, [newPassword, userId]);
 
-      res.json({ message: "✅ Password changed successfully!" });
-    });
-  });
+    res.json({ message: "✅ Password changed successfully!" });
+  } catch (err) {
+    console.error("Password change error:", err);
+    return res.status(500).json({ message: "Error updating password", error: err.message });
+  }
 });
+
 // Update user profile & bank details
-app.put("/api/user/:user_id", (req, res) => {
+app.put("/api/user/:user_id", async (req, res) => {
   const userId = req.params.user_id;
-  const { accountNumber = "", bankName = "", branchName = "", ifscCode = "" } = req.body; // default to empty string
+  const { accountNumber = "", bankName = "", branchName = "", ifscCode = "" } = req.body;
 
-  const query = `
-    UPDATE userregistrations
-    SET accountNumber = ?, bankName = ?, branchName = ?, ifscCode = ?
-    WHERE id = ?
-  `;
+  try {
+    const query = `
+      UPDATE userregistrations
+      SET "accountNumber" = $1, "bankName" = $2, "branchName" = $3, "ifscCode" = $4
+      WHERE id = $5
+    `;
 
-  db.query(query, [accountNumber, bankName, branchName, ifscCode, userId], (err, result) => {
-    if (err) {
-      console.error("DB update error:", err);
-      return res.status(500).json({ message: "Database error", error: err });
-    }
+    await db.query(query, [accountNumber, bankName, branchName, ifscCode, userId]);
 
     // Fetch updated user
-    db.query("SELECT * FROM userregistrations WHERE id = ?", [userId], (err2, results) => {
-      if (err2) return res.status(500).json({ message: "Database error", error: err2 });
-      res.json({ user: results[0] }); // consistent format
-    });
-  });
+    const fetchResult = await db.query("SELECT * FROM userregistrations WHERE id = $1", [userId]);
+    res.json({ user: fetchResult.rows[0] });
+  } catch (err) {
+    console.error("DB update error:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
 });
 
 // Get all users (Admin panel ke liye)
-app.get("/api/users", (req, res) => {
-  const query = "SELECT id, fullName, email, username, contactNumber, address, dob, registrationDate, accountNumber, bankName, branchName, ifscCode FROM userregistrations";
-
-  db.query(query, (err, results) => {
-    if (err) {
-      return res.status(500).json({ message: "Database error", error: err });
-    }
-    res.json(results);
-  });
+app.get("/api/users", async (req, res) => {
+  try {
+    const query = `SELECT id, "fullName", email, username, "contactNumber", address, dob, "registrationDate", "accountNumber", "bankName", "branchName", "ifscCode" FROM userregistrations`;
+    const result = await db.query(query);
+    res.json(result.rows);
+  } catch (err) {
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
 });
 
 // ✅ Get all users with their task progress (for Admin Tasks tab)
-app.get("/api/admin/users-progress", (req, res) => {
-  const query = `
-    SELECT 
-      u.id,
-      u.fullName,
-      u.username,
-      u.email,
-      u.contactNumber,
-      u.registrationDate,
-      COALESCE(p.total_entries, 500) as total_entries,
-      COALESCE(p.completed_entries, 0) as completed_entries,
-      p.registration_date,
-      p.submission_end_date,
-      COALESCE(p.penalty, 0) as penalty,
-      CASE 
-        WHEN p.total_entries IS NULL OR p.total_entries = 0 THEN 0
-        ELSE ROUND((COALESCE(p.completed_entries, 0) / p.total_entries) * 100, 2)
-      END as completion_percentage
-    FROM userregistrations u
-    LEFT JOIN user_progress p ON u.id = p.user_id
-    ORDER BY u.registrationDate DESC
-  `;
+app.get("/api/admin/users-progress", async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        u.id,
+        u."fullName",
+        u.username,
+        u.email,
+        u."contactNumber",
+        u."registrationDate",
+        COALESCE(p.total_entries, 500) as total_entries,
+        COALESCE(p.completed_entries, 0) as completed_entries,
+        p.registration_date,
+        p.submission_end_date,
+        COALESCE(p.penalty, 0) as penalty,
+        CASE 
+          WHEN p.total_entries IS NULL OR p.total_entries = 0 THEN 0
+          ELSE ROUND((COALESCE(p.completed_entries, 0)::numeric / p.total_entries) * 100, 2)
+        END as completion_percentage
+      FROM userregistrations u
+      LEFT JOIN user_progress p ON u.id = p.user_id
+      ORDER BY u."registrationDate" DESC
+    `;
 
-  db.query(query, (err, results) => {
-    if (err) {
-      console.error("❌ Error fetching users progress:", err);
-      return res.status(500).json({ message: "Database error", error: err.message });
-    }
-    console.log(`✅ Fetched ${results.length} users with progress data`);
-    res.json(results);
-  });
+    const result = await db.query(query);
+    console.log(`✅ Fetched ${result.rows.length} users with progress data`);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Error fetching users progress:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
 });
 
-
-app.delete("/api/users/:id", (req, res) => {
+app.delete("/api/users/:id", async (req, res) => {
   const { id } = req.params;
 
-  // ✅ Correct table name
-  db.query("DELETE FROM userregistrations WHERE id = ?", [id], (err, result) => {
-    if (err) {
-      console.error("Delete error:", err);
-      return res.status(500).json({ error: "Database error" });
-    }
-    if (result.affectedRows === 0) {
+  try {
+    const result = await db.query("DELETE FROM userregistrations WHERE id = $1", [id]);
+    if (result.rowCount === 0) {
       return res.status(404).json({ message: "User not found" });
     }
     res.json({ success: true, message: "User deleted successfully" });
-  });
+  } catch (err) {
+    console.error("Delete error:", err);
+    return res.status(500).json({ error: "Database error" });
+  }
 });
 
 // Upload user signature
-app.post("/api/upload-signature/:user_id", upload.single("signature"), (req, res) => {
+app.post("/api/upload-signature/:user_id", upload.single("signature"), async (req, res) => {
   const userId = req.params.user_id;
   const file = req.file;
 
@@ -556,39 +536,38 @@ app.post("/api/upload-signature/:user_id", upload.single("signature"), (req, res
     return res.status(400).json({ message: "No signature uploaded" });
   }
 
-  const query = "UPDATE userregistrations SET signature = ? WHERE id = ?";
-  db.query(query, [file.buffer, userId], (err) => {
-    if (err) {
-      console.error("Signature save error:", err);
-      return res.status(500).json({ message: "Database error", error: err });
-    }
+  try {
+    const query = "UPDATE userregistrations SET signature = $1 WHERE id = $2";
+    await db.query(query, [file.buffer, userId]);
     res.json({ success: true, message: "✅ Signature uploaded successfully!" });
-  });
+  } catch (err) {
+    console.error("Signature save error:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
 });
 
 // ✅ Route to fetch user's signature as an image
-app.get("/api/user-signature/:user_id", (req, res) => {
+app.get("/api/user-signature/:user_id", async (req, res) => {
   const userId = req.params.user_id;
-  const query = "SELECT signature FROM userregistrations WHERE id = ?";
 
-  db.query(query, [userId], (err, results) => {
-    if (err) {
-      console.error("Signature fetch error:", err);
-      return res.status(500).json({ message: "Database error" });
-    }
+  try {
+    const query = "SELECT signature FROM userregistrations WHERE id = $1";
+    const result = await db.query(query, [userId]);
 
-    if (results.length === 0 || !results[0].signature) {
+    if (result.rows.length === 0 || !result.rows[0].signature) {
       return res.status(404).json({ message: "No signature found" });
     }
 
     res.setHeader("Content-Type", "image/png");
-    res.send(results[0].signature);
-  });
+    res.send(result.rows[0].signature);
+  } catch (err) {
+    console.error("Signature fetch error:", err);
+    return res.status(500).json({ message: "Database error" });
+  }
 });
 
-
 // PUT /api/admin/extend-submission/:user_id
-app.put("/api/admin/extend-submission/:user_id", (req, res) => {
+app.put("/api/admin/extend-submission/:user_id", async (req, res) => {
   const { user_id } = req.params;
   const { newEndDate } = req.body;
 
@@ -596,81 +575,75 @@ app.put("/api/admin/extend-submission/:user_id", (req, res) => {
     return res.status(400).json({ message: "⚠️ newEndDate is required" });
   }
 
-  const updateQuery = "UPDATE user_progress SET submission_end_date = ? WHERE user_id = ?";
+  try {
+    const updateQuery = "UPDATE user_progress SET submission_end_date = $1 WHERE user_id = $2";
+    const result = await db.query(updateQuery, [newEndDate, user_id]);
 
-  db.query(updateQuery, [newEndDate, user_id], (err, result) => {
-    if (err) {
-      console.error("Error updating submission_end_date:", err);
-      return res.status(500).json({ message: "Database error", error: err });
-    }
-
-    if (result.affectedRows === 0) {
+    if (result.rowCount === 0) {
       return res.status(404).json({ message: "❌ User not found in progress table" });
     }
 
     // ✅ Fetch updated info to return to frontend
     const fetchQuery = `
-      SELECT u.fullName, u.username, p.registration_date, p.submission_end_date
+      SELECT u."fullName", u.username, p.registration_date, p.submission_end_date
       FROM userregistrations u
       JOIN user_progress p ON u.id = p.user_id
-      WHERE u.id = ?
+      WHERE u.id = $1
     `;
 
-    db.query(fetchQuery, [user_id], (err2, rows) => {
-      if (err2) {
-        console.error("Error fetching updated user:", err2);
-        return res.status(500).json({ message: "Error fetching updated data", error: err2 });
-      }
+    const fetchResult = await db.query(fetchQuery, [user_id]);
 
-      res.json({
-        message: "✅ Submission date extended successfully!",
-        updatedUser: rows[0],
-      });
+    res.json({
+      message: "✅ Submission date extended successfully!",
+      updatedUser: fetchResult.rows[0],
     });
-  });
+  } catch (err) {
+    console.error("Error updating submission_end_date:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
 });
 
-app.get("/api/user/:user_id", (req, res) => {
+app.get("/api/user/:user_id", async (req, res) => {
   const { user_id } = req.params;
 
-  const query = `
-    SELECT 
-      ur.id,
-      ur.fullName,
-      ur.email,
-      ur.username,
-      ur.registrationDate,
-      ur.contactNumber,
-      ur.alternateNumber,
-      ur.address,
-      ur.dob,
-      ur.bankName,
-      ur.branchName,
-      ur.ifscCode,
-      ur.accountNumber,
-      up.registration_date AS progress_registration_date,
-      up.submission_end_date AS submission_end_date,
-      up.completed_entries,
-      up.total_entries,
-      up.penalty
-    FROM userregistrations ur
-    LEFT JOIN user_progress up ON ur.id = up.user_id
-    WHERE ur.id = ?
-  `;
+  try {
+    const query = `
+      SELECT 
+        ur.id,
+        ur."fullName",
+        ur.email,
+        ur.username,
+        ur."registrationDate",
+        ur."contactNumber",
+        ur."alternateNumber",
+        ur.address,
+        ur.dob,
+        ur."bankName",
+        ur."branchName",
+        ur."ifscCode",
+        ur."accountNumber",
+        up.registration_date AS progress_registration_date,
+        up.submission_end_date AS submission_end_date,
+        up.completed_entries,
+        up.total_entries,
+        up.penalty
+      FROM userregistrations ur
+      LEFT JOIN user_progress up ON ur.id = up.user_id
+      WHERE ur.id = $1
+    `;
 
-  db.query(query, [user_id], (err, result) => {
-    if (err) {
-      console.error("❌ Database error:", err);
-      return res.status(500).json({ message: "Database error", error: err });
-    }
+    const result = await db.query(query, [user_id]);
 
-    if (result.length === 0) {
+    if (result.rows.length === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    console.log("✅ User data fetched with progress:", result[0]);
-    res.json({ user: result[0] });
-  });
+    console.log("✅ User data fetched with progress:", result.rows[0]);
+    res.json({ user: result.rows[0] });
+  } catch (err) {
+    console.error("❌ Database error:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
 });
 
 // Start server
