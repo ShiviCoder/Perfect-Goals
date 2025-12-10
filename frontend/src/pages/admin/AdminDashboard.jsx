@@ -330,8 +330,8 @@ const UsersModule = ({ users, handleRemove }) => {
             </div>
             <Registration onSuccess={() => {
               setShowRegistration(false);
-              // You might want to refresh the users list here
-              window.location.reload(); // or call a refresh function
+              fetchUsers(); // Refresh the users list without page reload
+              console.log("✅ Registration completed, refreshing users list");
             }} />
           </div>
         </div>

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { Document, Page } from "react-pdf";
 
-const Registration = () => {
+const Registration = ({ onSuccess }) => {
   const [fullName, setFullName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
   const [alternateNumber, setAlternateNumber] = useState("");
@@ -12,6 +12,7 @@ const Registration = () => {
   const [address, setAddress] = useState("");
   const [generatedUser, setGeneratedUser] = useState(null);
   const [pdfBlob, setPdfBlob] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
@@ -26,6 +27,9 @@ const Registration = () => {
     const randomNum2 = Math.floor(1000000 + Math.random() * 9000000);
     return `${randomNum1}PYC${randomNum2}`;
   };
+  
+  // Generate a unique submission ID to prevent duplicates
+  const [submissionId] = useState(() => Date.now() + Math.random());
 
   const generatePassword = () => {
     const chars = "0123456789";
@@ -63,6 +67,15 @@ const Registration = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log("⚠️ Form already submitting, ignoring duplicate submission");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    console.log("🚀 Starting user registration...");
 
     const username = generateUsername(fullName);
     const password = generatePassword();
@@ -77,9 +90,12 @@ const Registration = () => {
       username,
       password,
       registrationDate: new Date().toISOString(),
+      submissionId, // Add unique submission ID
     };
 
     try {
+      console.log("📤 Sending registration request...", { username, fullName });
+      
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,19 +103,32 @@ const Registration = () => {
       });
 
       const result = await response.json();
+      console.log("📥 Registration response:", result);
 
       if (response.ok) {
+        console.log("✅ Registration successful, creating PDF...");
         const pdfDataURL = await createAgreementPDF(fullName, address);
         if (pdfDataURL) {
           localStorage.setItem("agreementPDF", pdfDataURL);
         }
         setGeneratedUser({ fullName, username, password });
+        console.log("🎉 User registration completed successfully!");
+        
+        // Call onSuccess callback if provided
+        if (onSuccess) {
+          setTimeout(() => {
+            onSuccess();
+          }, 2000); // Give user time to see the success message
+        }
       } else {
         alert(result.message);
       }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("❌ Registration error:", error);
       alert("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+      console.log("🔄 Registration process finished, form ready for next submission");
     }
   };
 
@@ -282,8 +311,16 @@ const Registration = () => {
               />
             </div>
 
-            <button type="submit" style={styles.button}>
-              Register
+            <button 
+              type="submit" 
+              style={{
+                ...styles.button,
+                backgroundColor: isSubmitting ? "#ccc" : "#ffa600",
+                cursor: isSubmitting ? "not-allowed" : "pointer"
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Registering..." : "Register"}
             </button>
           </form>
         ) : (
