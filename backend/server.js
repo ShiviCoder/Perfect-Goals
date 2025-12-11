@@ -38,6 +38,38 @@ app.get("/ping", (req, res) => {
   res.json({ message: "pong", env: process.env.NODE_ENV });
 });
 
+// Database migration endpoint for signature columns
+app.get("/migrate-signature-columns", async (req, res) => {
+  try {
+    // Add signature status columns if they don't exist
+    await db.query(`
+      ALTER TABLE userregistrations 
+      ADD COLUMN IF NOT EXISTS signature_status VARCHAR(20) DEFAULT 'pending' CHECK (signature_status IN ('pending', 'approved', 'rejected')),
+      ADD COLUMN IF NOT EXISTS signature_uploaded_at TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS signature_approved_at TIMESTAMP
+    `);
+
+    // Update existing users without signature to have 'not_signed' status
+    await db.query(`
+      UPDATE userregistrations 
+      SET signature_status = 'not_signed' 
+      WHERE signature IS NULL AND signature_status = 'pending'
+    `);
+
+    res.json({ 
+      success: true, 
+      message: "✅ Signature columns added successfully!" 
+    });
+  } catch (err) {
+    console.error("Migration error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "❌ Migration failed", 
+      error: err.message 
+    });
+  }
+});
+
 // Add new admin user endpoint
 app.get("/add-admin", async (req, res) => {
   try {
@@ -705,11 +737,12 @@ app.get("/api/signature-status/:user_id", async (req, res) => {
     }
 
     const user = result.rows[0];
+    const status = user.signature_status || 'not_signed';
     res.json({
-      signature_status: user.signature_status || 'not_signed',
+      signature_status: status,
       signature_uploaded_at: user.signature_uploaded_at,
       signature_approved_at: user.signature_approved_at,
-      can_access_data_entry: user.signature_status === 'approved'
+      can_access_data_entry: status === 'approved'
     });
   } catch (err) {
     console.error("Error checking signature status:", err);
