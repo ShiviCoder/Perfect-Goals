@@ -32,7 +32,10 @@ CREATE TABLE IF NOT EXISTS userregistrations (
   "branchName" VARCHAR(255),
   "ifscCode" VARCHAR(20),
   signature BYTEA,
-  access VARCHAR(20) DEFAULT 'granted' CHECK (access IN ('granted', 'denied'))
+  access VARCHAR(20) DEFAULT 'granted' CHECK (access IN ('granted', 'denied')),
+  signature_status VARCHAR(20) DEFAULT 'pending' CHECK (signature_status IN ('pending', 'approved', 'rejected')),
+  signature_uploaded_at TIMESTAMP,
+  signature_approved_at TIMESTAMP
 );
 
 -- 3. Create user_progress table

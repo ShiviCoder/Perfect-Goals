@@ -20,6 +20,8 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
   const [numPages, setNumPages] = useState(null);
   const [pdfLoadError, setPdfLoadError] = useState(false);
   const [useIframeFallback, setUseIframeFallback] = useState(true); // Use iframe by default for stability
+  const [signatureStatus, setSignatureStatus] = useState(null);
+  const [isCheckingSignature, setIsCheckingSignature] = useState(true);
   
   // Memoize PDF options to prevent unnecessary reloads
   const pdfOptions = useMemo(() => ({
@@ -93,8 +95,36 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch resumes from backend
+  // Check signature status first
   useEffect(() => {
+    const checkSignatureStatus = async () => {
+      if (!userId) return;
+      
+      try {
+        setIsCheckingSignature(true);
+        const response = await fetch(`${apiBase}/api/signature-status/${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSignatureStatus(data);
+        } else {
+          console.error("Failed to fetch signature status");
+          setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
+        }
+      } catch (error) {
+        console.error("Error checking signature status:", error);
+        setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
+      } finally {
+        setIsCheckingSignature(false);
+      }
+    };
+
+    checkSignatureStatus();
+  }, [userId, apiBase]);
+
+  // Fetch resumes from backend (only if signature is approved)
+  useEffect(() => {
+    if (!signatureStatus?.can_access_data_entry) return;
+    
     const fetchResumes = async () => {
       try {
         const response = await fetch(`${apiBase}/api/resumes`);
@@ -115,7 +145,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
       }
     };
     fetchResumes();
-  }, [apiBase]);
+  }, [apiBase, signatureStatus]);
 
   // Load current resume PDF
   useEffect(() => {
@@ -239,7 +269,121 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
 
 
 
-  // Show list view or work view based on mode
+  // Check signature status first
+  if (isCheckingSignature) {
+    return (
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "center", 
+        alignItems: "center", 
+        minHeight: "400px",
+        flexDirection: "column",
+        gap: "20px"
+      }}>
+        <div style={{ fontSize: "24px" }}>⏳</div>
+        <p style={{ color: "#666", fontSize: "16px" }}>Checking signature status...</p>
+      </div>
+    );
+  }
+
+  // Show signature required message if not approved
+  if (!signatureStatus?.can_access_data_entry) {
+    const getStatusMessage = () => {
+      switch (signatureStatus?.signature_status) {
+        case 'not_signed':
+          return {
+            icon: "✍️",
+            title: "Signature Required",
+            message: "Please sign the agreement first to access data entry.",
+            action: "Go to Agreement tab to sign"
+          };
+        case 'pending':
+          return {
+            icon: "⏳",
+            title: "Signature Under Review",
+            message: "Your signature is being reviewed by admin.",
+            action: "Please wait for admin approval"
+          };
+        case 'rejected':
+          return {
+            icon: "❌",
+            title: "Signature Rejected",
+            message: "Your signature was rejected by admin.",
+            action: "Please sign the agreement again"
+          };
+        default:
+          return {
+            icon: "⚠️",
+            title: "Access Denied",
+            message: "Unable to access data entry at this time.",
+            action: "Please contact support"
+          };
+      }
+    };
+
+    const status = getStatusMessage();
+
+    return (
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "center", 
+        alignItems: "center", 
+        minHeight: "500px",
+        padding: "40px"
+      }}>
+        <div style={{
+          textAlign: "center",
+          backgroundColor: "#fff",
+          padding: "40px",
+          borderRadius: "12px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          border: "2px solid #f7941e",
+          maxWidth: "500px"
+        }}>
+          <div style={{ fontSize: "64px", marginBottom: "20px" }}>{status.icon}</div>
+          <h2 style={{ 
+            color: "#0b2f5a", 
+            marginBottom: "15px",
+            fontSize: "24px",
+            fontWeight: "600"
+          }}>
+            {status.title}
+          </h2>
+          <p style={{ 
+            color: "#666", 
+            fontSize: "16px", 
+            lineHeight: "1.6",
+            marginBottom: "20px"
+          }}>
+            {status.message}
+          </p>
+          <div style={{
+            backgroundColor: "#f8f9fa",
+            padding: "15px",
+            borderRadius: "8px",
+            border: "1px solid #e9ecef"
+          }}>
+            <p style={{ 
+              color: "#0b2f5a", 
+              fontSize: "14px", 
+              fontWeight: "500",
+              margin: 0
+            }}>
+              📋 {status.action}
+            </p>
+          </div>
+          
+          {signatureStatus?.signature_uploaded_at && (
+            <div style={{ marginTop: "20px", fontSize: "12px", color: "#999" }}>
+              Signature uploaded: {new Date(signatureStatus.signature_uploaded_at).toLocaleString()}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Show list view or work view based on mode (only if signature is approved)
   if (viewMode === "list") {
     console.log("📋 Rendering ResumeListView...");
     try {

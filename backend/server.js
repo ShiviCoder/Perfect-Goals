@@ -100,7 +100,10 @@ app.get("/setup-database", async (req, res) => {
         "branchName" VARCHAR(255),
         "ifscCode" VARCHAR(20),
         signature BYTEA,
-        access VARCHAR(20) DEFAULT 'granted' CHECK (access IN ('granted', 'denied'))
+        access VARCHAR(20) DEFAULT 'granted' CHECK (access IN ('granted', 'denied')),
+        signature_status VARCHAR(20) DEFAULT 'pending' CHECK (signature_status IN ('pending', 'approved', 'rejected')),
+        signature_uploaded_at TIMESTAMP,
+        signature_approved_at TIMESTAMP
       )
     `);
 
@@ -680,12 +683,37 @@ app.post("/api/upload-signature/:user_id", upload.single("signature"), async (re
   }
 
   try {
-    const query = "UPDATE userregistrations SET signature = $1 WHERE id = $2";
+    const query = "UPDATE userregistrations SET signature = $1, signature_status = 'pending', signature_uploaded_at = CURRENT_TIMESTAMP WHERE id = $2";
     await db.query(query, [file.buffer, userId]);
-    res.json({ success: true, message: "✅ Signature uploaded successfully!" });
+    res.json({ success: true, message: "✅ Signature uploaded successfully! Waiting for admin approval." });
   } catch (err) {
     console.error("Signature save error:", err);
     return res.status(500).json({ message: "Database error", error: err.message });
+  }
+});
+
+// ✅ Route to check signature status
+app.get("/api/signature-status/:user_id", async (req, res) => {
+  const userId = req.params.user_id;
+
+  try {
+    const query = "SELECT signature_status, signature_uploaded_at, signature_approved_at FROM userregistrations WHERE id = $1";
+    const result = await db.query(query, [userId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const user = result.rows[0];
+    res.json({
+      signature_status: user.signature_status || 'not_signed',
+      signature_uploaded_at: user.signature_uploaded_at,
+      signature_approved_at: user.signature_approved_at,
+      can_access_data_entry: user.signature_status === 'approved'
+    });
+  } catch (err) {
+    console.error("Error checking signature status:", err);
+    res.status(500).json({ message: "Database error", error: err.message });
   }
 });
 
@@ -743,6 +771,58 @@ app.put("/api/admin/extend-submission/:user_id", async (req, res) => {
   } catch (err) {
     console.error("Error updating submission_end_date:", err);
     return res.status(500).json({ message: "Database error", error: err.message });
+  }
+});
+
+// ✅ Admin endpoint to approve/reject signatures
+app.put("/api/admin/signature-approval/:user_id", async (req, res) => {
+  const { user_id } = req.params;
+  const { action } = req.body; // 'approve' or 'reject'
+
+  if (!action || !['approve', 'reject'].includes(action)) {
+    return res.status(400).json({ message: "⚠️ Action must be 'approve' or 'reject'" });
+  }
+
+  try {
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    const query = "UPDATE userregistrations SET signature_status = $1, signature_approved_at = CURRENT_TIMESTAMP WHERE id = $2";
+    const result = await db.query(query, [status, user_id]);
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "❌ User not found" });
+    }
+
+    res.json({
+      message: `✅ Signature ${action}d successfully!`,
+      signature_status: status
+    });
+  } catch (err) {
+    console.error("Error updating signature status:", err);
+    return res.status(500).json({ message: "Database error", error: err.message });
+  }
+});
+
+// ✅ Admin endpoint to get all users with signature status
+app.get("/api/admin/signatures", async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        u.id,
+        u."fullName",
+        u.username,
+        u.signature_status,
+        u.signature_uploaded_at,
+        u.signature_approved_at,
+        CASE WHEN u.signature IS NOT NULL THEN true ELSE false END as has_signature
+      FROM userregistrations u
+      ORDER BY u.signature_uploaded_at DESC NULLS LAST
+    `;
+    
+    const result = await db.query(query);
+    res.json({ signatures: result.rows });
+  } catch (err) {
+    console.error("Error fetching signatures:", err);
+    res.status(500).json({ message: "Database error", error: err.message });
   }
 });
 
