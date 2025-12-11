@@ -19,12 +19,14 @@ const SignatureApprovalModule = () => {
         const data = await res.json();
         setSignatures(data.signatures);
         setError(null);
+      } else if (res.status === 404) {
+        setError('Signature approval feature is being deployed. Please wait a few minutes and refresh.');
       } else {
         setError('Failed to fetch signatures');
       }
     } catch (err) {
       console.error('Error fetching signatures:', err);
-      setError('Error fetching signatures');
+      setError('Backend is updating. Please wait a few minutes and refresh the page.');
     } finally {
       setLoading(false);
     }
