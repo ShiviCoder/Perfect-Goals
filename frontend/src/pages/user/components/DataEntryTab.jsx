@@ -294,7 +294,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
         style={{
           flex: "0 0 auto",
           width: "100%",
-          height: "500px",
+          height: "400px", // Reduced height to ensure form is visible
           display: "flex",
           flexDirection: "column",
           backgroundColor: "#fff",
@@ -537,12 +537,14 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
         style={{
           flex: "1",
           width: "100%",
+          minHeight: "600px", // Ensure minimum height for form visibility
           display: "flex",
           flexDirection: "column",
           backgroundColor: "#fff",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-          overflow: "hidden",
+          overflow: "visible", // Changed from hidden to visible
+          border: "2px solid #f7941e", // Debug border to make form visible
         }}
       >
         {/* Form Header */}
@@ -568,6 +570,7 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
         </div>
 
         {/* Comprehensive Form Component */}
+        {console.log("🔧 Rendering ComprehensiveDataEntryForm with formData:", formData)}
         <ComprehensiveDataEntryForm
           formData={formData}
           handleInputChange={handleInputChange}
