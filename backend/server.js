@@ -204,9 +204,32 @@ app.get("/setup-database", async (req, res) => {
       )
     `);
 
+    // Add signature approval columns (migration)
+    try {
+      await db.query(`
+        ALTER TABLE userregistrations 
+        ADD COLUMN IF NOT EXISTS signature_status VARCHAR(20) DEFAULT 'pending' CHECK (signature_status IN ('pending', 'approved', 'rejected')),
+        ADD COLUMN IF NOT EXISTS signature_uploaded_at TIMESTAMP,
+        ADD COLUMN IF NOT EXISTS signature_approved_at TIMESTAMP
+      `);
+
+      // Update existing users without signature to have 'not_signed' status
+      await db.query(`
+        UPDATE userregistrations 
+        SET signature_status = 'not_signed' 
+        WHERE signature IS NULL AND signature_status = 'pending'
+      `);
+
+      console.log("✅ Signature columns migration completed");
+    } catch (migrationErr) {
+      console.error("⚠️ Signature migration warning:", migrationErr.message);
+      // Don't fail the whole setup if migration fails
+    }
+
     res.json({ 
       message: "✅ Database tables created successfully!",
-      tables: ["admins", "userregistrations", "user_progress", "data_entries"]
+      tables: ["admins", "userregistrations", "user_progress", "data_entries"],
+      migrations: ["signature_approval_columns"]
     });
   } catch (err) {
     console.error("Database setup error:", err);
