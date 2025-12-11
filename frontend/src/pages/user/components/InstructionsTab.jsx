@@ -5,7 +5,7 @@ const InstructionsTab = ({ numPages, onDocumentLoadSuccess }) => {
   return (
     <div
       style={{
-        maxHeight: "600px",
+        maxHeight: "90vh", // Increased height to 90% of viewport height
         overflowY: "auto",
         border: "1px solid #ccc",
         borderRadius: "8px",
@@ -40,11 +40,11 @@ const InstructionsTab = ({ numPages, onDocumentLoadSuccess }) => {
             "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js",
         }}
       >
-        {Array.from(new Array(numPages || 0), (el, index) => (
+        {Array.from(new Array(numPages || 0), (_, index) => (
           <Page
             key={`page_${index + 1}`}
             pageNumber={index + 1}
-            width={800}
+            width={Math.min(window.innerWidth - 40, 900)} // Increased width and made responsive
             renderTextLayer={false}
             renderAnnotationLayer={false}
           />

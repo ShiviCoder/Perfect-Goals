@@ -222,14 +222,24 @@ const UserDashboard = () => {
   }
 };
 
-  // 🔁 Initial call + Auto refresh every 10 seconds
+  // 🔁 Initial call only (removed auto-refresh to prevent PDF reloading)
   fetchUser();
-  const intervalId = setInterval(fetchUser, 10000);
 
-  return () => clearInterval(intervalId);
+  // Optional: Refresh only when tab becomes visible again
+  const handleVisibilityChange = () => {
+    if (!document.hidden) {
+      fetchUser();
+    }
+  };
+  
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
 }, [user_id, navigate]);
 
-// ✅ Fetch progress every 3 seconds
+// ✅ Fetch progress only when needed (removed auto-refresh to prevent PDF reloading)
 useEffect(() => {
   if (!user_id) return;
 
@@ -245,9 +255,10 @@ useEffect(() => {
     }
   };
 
+  // Initial fetch only
   fetchProgress();
-  const intervalId = setInterval(fetchProgress, 3000);
-  return () => clearInterval(intervalId);
+  
+  // Progress will be updated when user completes data entry via handleEntryComplete
 }, [user_id]);
 
  useEffect(() => {
