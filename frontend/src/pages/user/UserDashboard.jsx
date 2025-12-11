@@ -31,7 +31,7 @@ const UserDashboard = () => {
   const [numPages, setNumPages] = useState(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [profileSubTab, setProfileSubTab] = useState(null); // sub nav
-  const [signatureFile, setSignatureFile] = useState(null);
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
@@ -486,8 +486,6 @@ useEffect(() => {
             pdfURL={pdfURL}
             numPages={numPages}
             onDocumentLoadSuccess={onDocumentLoadSuccess}
-            signatureFile={signatureFile}
-            setSignatureFile={setSignatureFile}
             addSignatureToPDF={addSignatureToPDF}
             handleSignatureUpload={handleSignatureUpload}
           />
