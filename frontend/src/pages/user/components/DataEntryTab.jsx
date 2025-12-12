@@ -115,12 +115,23 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
               const hasSignature = userData.user && userData.user.signature;
               
               if (hasSignature) {
-                // User has signature, allow access (assume approved for now)
-                setSignatureStatus({ 
-                  signature_status: 'approved', 
-                  can_access_data_entry: true,
-                  signature_uploaded_at: new Date().toISOString()
-                });
+                // Check if admin has approved this signature
+                const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
+                const isApproved = approvedUsers.includes(parseInt(userId));
+                
+                if (isApproved) {
+                  setSignatureStatus({ 
+                    signature_status: 'approved', 
+                    can_access_data_entry: true,
+                    signature_uploaded_at: new Date().toISOString()
+                  });
+                } else {
+                  setSignatureStatus({ 
+                    signature_status: 'pending', 
+                    can_access_data_entry: false,
+                    signature_uploaded_at: new Date().toISOString()
+                  });
+                }
               } else {
                 // No signature, require signing
                 setSignatureStatus({ 
