@@ -35,7 +35,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/ping", (req, res) => {
-  res.json({ message: "pong", env: process.env.NODE_ENV });
+  res.json({ 
+    message: "pong", 
+    env: process.env.NODE_ENV,
+    timestamp: new Date().toISOString(),
+    version: "signature-approval-v1"
+  });
 });
 
 // Database migration endpoint for signature columns
