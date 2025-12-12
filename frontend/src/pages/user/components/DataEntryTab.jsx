@@ -107,9 +107,34 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
           const data = await response.json();
           setSignatureStatus(data);
         } else if (response.status === 404) {
-          // Endpoint not deployed yet, allow access for now
-          console.warn("Signature status endpoint not available, allowing access");
-          setSignatureStatus({ signature_status: 'approved', can_access_data_entry: true });
+          // Use existing user endpoint to check signature
+          try {
+            const userResponse = await fetch(`${apiBase}/api/user/${userId}`);
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              const hasSignature = userData.user && userData.user.signature;
+              
+              if (hasSignature) {
+                // User has signature, allow access (assume approved for now)
+                setSignatureStatus({ 
+                  signature_status: 'approved', 
+                  can_access_data_entry: true,
+                  signature_uploaded_at: new Date().toISOString()
+                });
+              } else {
+                // No signature, require signing
+                setSignatureStatus({ 
+                  signature_status: 'not_signed', 
+                  can_access_data_entry: false 
+                });
+              }
+            } else {
+              setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
+            }
+          } catch (err) {
+            console.error("Error checking user signature:", err);
+            setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
+          }
         } else {
           console.error("Failed to fetch signature status");
           setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
