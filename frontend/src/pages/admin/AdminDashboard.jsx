@@ -1,352 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Registration from "./Registration";
 import { FaBars, FaTimes } from "react-icons/fa";
-const SignatureApprovalModule = () => {
-  const [signatures, setSignatures] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchSignatures();
-  }, []);
-
-  const fetchSignatures = async () => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      // Try new endpoint first
-      const res = await fetch(`${apiUrl}/api/admin/signatures`);
-      
-      if (res.ok) {
-        const data = await res.json();
-        setSignatures(data.signatures);
-        setError(null);
-      } else if (res.status === 404) {
-        // Fallback: Use existing users endpoint to get signature info
-        try {
-          const usersRes = await fetch(`${apiUrl}/api/admin/users-progress`);
-          if (usersRes.ok) {
-            const usersData = await usersRes.json();
-            
-            // Check each user's signature status individually
-            const signaturePromises = usersData.map(async (user) => {
-              try {
-                const userDetailRes = await fetch(`${apiUrl}/api/user/${user.id}`);
-                if (userDetailRes.ok) {
-                  const userDetail = await userDetailRes.json();
-                  const hasSignature = userDetail.user && userDetail.user.signature;
-                  
-                  // Check if admin has approved this signature
-                  const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
-                  const isApproved = approvedUsers.includes(user.id);
-                  
-                  let status = 'not_signed';
-                  if (hasSignature) {
-                    status = isApproved ? 'approved' : 'pending';
-                  }
-                  
-                  return {
-                    id: user.id,
-                    fullName: user.fullName,
-                    username: user.username,
-                    has_signature: hasSignature,
-                    signature_status: status,
-                    signature_uploaded_at: hasSignature ? user.registrationDate : null
-                  };
-                } else {
-                  return {
-                    id: user.id,
-                    fullName: user.fullName,
-                    username: user.username,
-                    has_signature: false,
-                    signature_status: 'not_signed',
-                    signature_uploaded_at: null
-                  };
-                }
-              } catch (err) {
-                return {
-                  id: user.id,
-                  fullName: user.fullName,
-                  username: user.username,
-                  has_signature: false,
-                  signature_status: 'not_signed',
-                  signature_uploaded_at: null
-                };
-              }
-            });
-            
-            const signatureData = await Promise.all(signaturePromises);
-            
-            setSignatures(signatureData);
-            setError(null);
-          } else {
-            setError('Unable to fetch user data');
-          }
-        } catch (fallbackErr) {
-          setError('Signature feature temporarily using fallback mode. All users have access.');
-          setSignatures([]);
-        }
-      } else {
-        setError('Failed to fetch signatures');
-      }
-    } catch (err) {
-      console.error('Error fetching signatures:', err);
-      setError('Using temporary signature approval mode. All signed users have access.');
-      setSignatures([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignatureAction = async (userId, action) => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
-      // Try new endpoint first
-      let res = await fetch(`${apiUrl}/api/admin/signature-approval/${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        alert(data.message);
-        fetchSignatures(); // Refresh the list
-      } else if (res.status === 404) {
-        // Fallback: Use localStorage to track approvals temporarily
-        const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
-        
-        if (action === 'approve') {
-          if (!approvedUsers.includes(userId)) {
-            approvedUsers.push(userId);
-            localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
-          }
-          alert('✅ Signature approved successfully! (Temporary approval stored)');
-        } else if (action === 'reject') {
-          const index = approvedUsers.indexOf(userId);
-          if (index > -1) {
-            approvedUsers.splice(index, 1);
-            localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
-          }
-          alert('❌ Signature rejected successfully!');
-        }
-        
-        fetchSignatures(); // Refresh the list
-      } else {
-        const errorData = await res.json();
-        alert(`Error: ${errorData.message}`);
-      }
-    } catch (err) {
-      console.error('Error updating signature:', err);
-      
-      // Fallback approval system
-      const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
-      
-      if (action === 'approve') {
-        if (!approvedUsers.includes(userId)) {
-          approvedUsers.push(userId);
-          localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
-        }
-        alert('✅ Signature approved successfully! (Using temporary approval system)');
-      } else if (action === 'reject') {
-        const index = approvedUsers.indexOf(userId);
-        if (index > -1) {
-          approvedUsers.splice(index, 1);
-          localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
-        }
-        alert('❌ Signature rejected successfully!');
-      }
-      
-      fetchSignatures(); // Refresh the list
-    }
-  };
-
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
-        <p>Loading signatures...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ textAlign: 'center', padding: '40px', color: 'red' }}>
-        <p>Error: {error}</p>
-        <button onClick={fetchSignatures} style={{ padding: '10px 20px', marginTop: '10px' }}>
-          Retry
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <h2 style={{ color: '#004a8f', marginBottom: '20px' }}>✍️ Signature Approval</h2>
-      
-      {signatures.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
-          <p>No signatures found</p>
-        </div>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ 
-            width: '100%', 
-            borderCollapse: 'collapse',
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}>
-            <thead>
-              <tr style={{ backgroundColor: '#004a8f', color: 'white' }}>
-                <th style={{ padding: '15px', textAlign: 'left' }}>User</th>
-                <th style={{ padding: '15px', textAlign: 'left' }}>Username</th>
-                <th style={{ padding: '15px', textAlign: 'center' }}>Signature</th>
-                <th style={{ padding: '15px', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '15px', textAlign: 'center' }}>Uploaded</th>
-                <th style={{ padding: '15px', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {signatures.map((sig, index) => (
-                <tr key={sig.id} style={{ 
-                  borderBottom: '1px solid #eee',
-                  backgroundColor: index % 2 === 0 ? '#f8f9fa' : 'white'
-                }}>
-                  <td style={{ padding: '15px' }}>{sig.fullName}</td>
-                  <td style={{ padding: '15px', fontFamily: 'monospace' }}>{sig.username}</td>
-                  <td style={{ padding: '15px', textAlign: 'center' }}>
-                    {sig.has_signature ? (
-                      <a 
-                        href={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user-signature/${sig.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ 
-                          color: '#004a8f', 
-                          textDecoration: 'none',
-                          padding: '5px 10px',
-                          backgroundColor: '#e3f2fd',
-                          borderRadius: '4px',
-                          fontSize: '12px'
-                        }}
-                      >
-                        📄 View
-                      </a>
-                    ) : (
-                      <span style={{ color: '#999', fontSize: '12px' }}>No signature</span>
-                    )}
-                  </td>
-                  <td style={{ padding: '15px', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      backgroundColor: 
-                        sig.signature_status === 'approved' ? '#d4edda' :
-                        sig.signature_status === 'rejected' ? '#f8d7da' :
-                        sig.signature_status === 'pending' ? '#fff3cd' : '#e2e3e5',
-                      color:
-                        sig.signature_status === 'approved' ? '#155724' :
-                        sig.signature_status === 'rejected' ? '#721c24' :
-                        sig.signature_status === 'pending' ? '#856404' : '#6c757d'
-                    }}>
-                      {sig.signature_status === 'approved' ? '✅ Approved' :
-                       sig.signature_status === 'rejected' ? '❌ Rejected' :
-                       sig.signature_status === 'pending' ? '⏳ Pending' : '➖ Not Signed'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '15px', textAlign: 'center', fontSize: '12px', color: '#666' }}>
-                    {sig.signature_uploaded_at ? 
-                      new Date(sig.signature_uploaded_at).toLocaleDateString() : 
-                      '-'
-                    }
-                  </td>
-                  <td style={{ padding: '15px', textAlign: 'center' }}>
-                    {sig.has_signature && sig.signature_status === 'pending' && (
-                      <div style={{ display: 'flex', gap: '5px', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => handleSignatureAction(sig.id, 'approve')}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#28a745',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ✅ Approve
-                        </button>
-                        <button
-                          onClick={() => handleSignatureAction(sig.id, 'reject')}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            fontSize: '12px',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          ❌ Reject
-                        </button>
-                      </div>
-                    )}
-                    {sig.signature_status === 'approved' && (
-                      <span style={{ fontSize: '12px', color: '#28a745' }}>
-                        Approved ✓
-                      </span>
-                    )}
-                    {sig.signature_status === 'rejected' && (
-                      <button
-                        onClick={() => handleSignatureAction(sig.id, 'approve')}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          fontSize: '12px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        ✅ Approve
-                      </button>
-                    )}
-                    {!sig.has_signature && (
-                      <span style={{ fontSize: '12px', color: '#999' }}>
-                        No action needed
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      
-      <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-        <h4 style={{ color: '#004a8f', marginBottom: '10px' }}>📋 Instructions:</h4>
-        <ul style={{ color: '#666', fontSize: '14px', lineHeight: '1.6' }}>
-          <li>Review user signatures by clicking "📄 View"</li>
-          <li>Approve valid signatures to grant data entry access</li>
-          <li>Reject invalid signatures - users will need to sign again</li>
-          <li>Only users with approved signatures can access data entry</li>
-        </ul>
-      </div>
-    </div>
-  );
-};
-
 const TasksModule = () => {
   const [usersProgress, setUsersProgress] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -613,6 +267,73 @@ const NotificationsModule = ({ users }) => (
 
 const UsersModule = ({ users, handleRemove }) => {
   const [showRegistration, setShowRegistration] = useState(false);
+  const [userSignatureStatus, setUserSignatureStatus] = useState({});
+
+  // Load signature status for all users
+  useEffect(() => {
+    const loadSignatureStatus = async () => {
+      const statusMap = {};
+      const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
+      
+      for (const user of users) {
+        try {
+          const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+          const userRes = await fetch(`${apiUrl}/api/user/${user.id}`);
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            const hasSignature = userData.user && userData.user.signature;
+            const isApproved = approvedUsers.includes(user.id);
+            
+            statusMap[user.id] = {
+              hasSignature,
+              status: hasSignature ? (isApproved ? 'approved' : 'pending') : 'not_signed'
+            };
+          }
+        } catch (err) {
+          statusMap[user.id] = { hasSignature: false, status: 'not_signed' };
+        }
+      }
+      setUserSignatureStatus(statusMap);
+    };
+
+    if (users.length > 0) {
+      loadSignatureStatus();
+    }
+  }, [users]);
+
+  const handleSignatureApproval = async (userId, action) => {
+    try {
+      const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
+      
+      if (action === 'approve') {
+        if (!approvedUsers.includes(userId)) {
+          approvedUsers.push(userId);
+          localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
+        }
+        alert('✅ Signature approved! User can now access data entry.');
+      } else if (action === 'reject') {
+        const index = approvedUsers.indexOf(userId);
+        if (index > -1) {
+          approvedUsers.splice(index, 1);
+          localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
+        }
+        alert('❌ Signature rejected! User access blocked.');
+      }
+      
+      // Update local state
+      setUserSignatureStatus(prev => ({
+        ...prev,
+        [userId]: {
+          ...prev[userId],
+          status: action === 'approve' ? 'approved' : 'pending'
+        }
+      }));
+      
+    } catch (err) {
+      console.error('Error updating signature approval:', err);
+      alert('Error updating signature approval');
+    }
+  };
 
   return (
     <div>
@@ -707,20 +428,104 @@ const UsersModule = ({ users, handleRemove }) => {
                   <td style={{ border: "1px solid #ddd", padding: "10px" }}>{u.contactNumber}</td>
                   <td style={{ border: "1px solid #ddd", padding: "10px" }}>{u.address}</td>
                   <td style={{ border: "1px solid #ddd", padding: "10px" }}>{u.dob}</td>
-                  <td style={{ border: "1px solid #ddd", padding: "10px", textAlign: "center" }}>
-                    <img
-                      src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user-signature/${u.id}`}
-                      alt="Signature"
-                      style={{
-                        width: "100px",
-                        height: "50px",
-                        objectFit: "contain",
-                        border: "1px solid #ccc",
-                        borderRadius: "4px",
-                        backgroundColor: "#fff",
-                      }}
-                      onError={(e) => (e.target.style.display = "none")}
-                    />
+                  <td style={{ border: "1px solid #ddd", padding: "10px", textAlign: "center", minWidth: "200px" }}>
+                    {userSignatureStatus[u.id]?.hasSignature ? (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+                        {/* Signature Image */}
+                        <img
+                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/user-signature/${u.id}`}
+                          alt="Signature"
+                          style={{
+                            width: "120px",
+                            height: "60px",
+                            objectFit: "contain",
+                            border: "2px solid #ddd",
+                            borderRadius: "6px",
+                            backgroundColor: "#fff",
+                          }}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.nextSibling.style.display = "block";
+                          }}
+                        />
+                        <div style={{ display: "none", color: "#999", fontSize: "12px" }}>No signature image</div>
+                        
+                        {/* Status Badge */}
+                        <div style={{
+                          padding: "4px 8px",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                          fontWeight: "600",
+                          backgroundColor: 
+                            userSignatureStatus[u.id]?.status === 'approved' ? '#d4edda' :
+                            userSignatureStatus[u.id]?.status === 'pending' ? '#fff3cd' : '#f8d7da',
+                          color:
+                            userSignatureStatus[u.id]?.status === 'approved' ? '#155724' :
+                            userSignatureStatus[u.id]?.status === 'pending' ? '#856404' : '#721c24'
+                        }}>
+                          {userSignatureStatus[u.id]?.status === 'approved' ? '✅ Approved' :
+                           userSignatureStatus[u.id]?.status === 'pending' ? '⏳ Pending' : '❌ Rejected'}
+                        </div>
+
+                        {/* Approval Buttons */}
+                        {userSignatureStatus[u.id]?.status === 'pending' && (
+                          <div style={{ display: "flex", gap: "5px" }}>
+                            <button
+                              onClick={() => handleSignatureApproval(u.id, 'approve')}
+                              style={{
+                                padding: "4px 8px",
+                                backgroundColor: "#28a745",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "11px",
+                                cursor: "pointer",
+                                fontWeight: "600"
+                              }}
+                            >
+                              ✅ Approve
+                            </button>
+                            <button
+                              onClick={() => handleSignatureApproval(u.id, 'reject')}
+                              style={{
+                                padding: "4px 8px",
+                                backgroundColor: "#dc3545",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "4px",
+                                fontSize: "11px",
+                                cursor: "pointer",
+                                fontWeight: "600"
+                              }}
+                            >
+                              ❌ Reject
+                            </button>
+                          </div>
+                        )}
+
+                        {userSignatureStatus[u.id]?.status === 'approved' && (
+                          <button
+                            onClick={() => handleSignatureApproval(u.id, 'reject')}
+                            style={{
+                              padding: "4px 8px",
+                              backgroundColor: "#6c757d",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "4px",
+                              fontSize: "11px",
+                              cursor: "pointer",
+                              fontWeight: "600"
+                            }}
+                          >
+                            🚫 Revoke
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ color: "#999", fontSize: "12px", fontStyle: "italic" }}>
+                        No signature uploaded
+                      </div>
+                    )}
                   </td>
                   <td style={{ border: "1px solid #ddd", padding: "10px", textAlign: "center" }}>
                     <button
@@ -980,7 +785,7 @@ const AdminDashboard = () => {
         }}
       >
         <h2 style={{ textAlign: "center", marginBottom: "30px" }}>Admin Panel</h2>
-        {["users", "tasks", "payments", "notifications", "extend", "signatures"].map((tab) => (
+        {["users", "tasks", "payments", "notifications", "extend"].map((tab) => (
           <button
             key={tab}
             onClick={() => {
@@ -998,9 +803,7 @@ const AdminDashboard = () => {
               textAlign: "left",
             }}
           >
-            {tab === "extend" ? "Extend Date" : 
-             tab === "signatures" ? "Signature Approval" : 
-             tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === "extend" ? "Extend Date" : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </aside>
@@ -1021,7 +824,6 @@ const AdminDashboard = () => {
         {activeTab === "payments" && <PaymentsModule />}
         {activeTab === "notifications" && <NotificationsModule users={users} />}
         {activeTab === "extend" && <ExtendDateModule refreshUsers={fetchUsers} />}
-        {activeTab === "signatures" && <SignatureApprovalModule />}
       </main>
     </div>
   );
