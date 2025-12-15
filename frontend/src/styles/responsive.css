@@ -679,3 +679,78 @@
     display: block;
   }
 }
+
+/* Agreement Tab Responsive Styles */
+.agreement-tab-container {
+  padding: 10px;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (min-width: 768px) {
+  .agreement-tab-container {
+    padding: 20px;
+  }
+}
+
+/* PDF Viewer in Agreement Tab */
+.agreement-pdf-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.agreement-pdf-container .react-pdf__Document {
+  max-width: 100%;
+}
+
+.agreement-pdf-container .react-pdf__Page {
+  margin-bottom: 10px !important;
+  max-width: 100% !important;
+}
+
+@media (max-width: 768px) {
+  .agreement-pdf-container .react-pdf__Page canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+
+/* Signature Section Responsive */
+.signature-section {
+  margin-top: 30px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid #e9ecef;
+}
+
+@media (min-width: 768px) {
+  .signature-section {
+    padding: 20px;
+  }
+}
+
+.signature-canvas-container {
+  border: 2px solid #0b2f5a;
+  border-radius: 8px;
+  background-color: white;
+  display: block;
+  width: 100%;
+  max-width: 600px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.signature-canvas {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .signature-canvas-container {
+    max-width: 100%;
+  }
+}

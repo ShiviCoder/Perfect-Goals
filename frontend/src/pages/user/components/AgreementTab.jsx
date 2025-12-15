@@ -16,31 +16,27 @@ const AgreementTab = ({
   }
 
   return (
-    <section>
-      <Document
-        file={pdfURL}
-        onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={(error) => console.error("PDF load error:", error)}
-      >
-        {Array.from(new Array(numPages || 0), (_, index) => (
-          <Page
-            key={`page_${index + 1}`}
-            pageNumber={index + 1}
-            width={800}
-            renderTextLayer={false}
-            renderAnnotationLayer={false}
-          />
-        ))}
-      </Document>
+    <section className="agreement-tab-container">
+      <div className="agreement-pdf-container">
+        <Document
+          file={pdfURL}
+          onLoadSuccess={onDocumentLoadSuccess}
+          onLoadError={(error) => console.error("PDF load error:", error)}
+        >
+          {Array.from(new Array(numPages || 0), (_, index) => (
+            <Page
+              key={`page_${index + 1}`}
+              pageNumber={index + 1}
+              width={Math.min(800, window.innerWidth - 280)} // Responsive width
+              renderTextLayer={false}
+              renderAnnotationLayer={false}
+            />
+          ))}
+        </Document>
+      </div>
 
       {/* Digital Signature Pad */}
-      <div style={{ 
-        marginTop: "30px", 
-        padding: "20px", 
-        backgroundColor: "#f8f9fa", 
-        borderRadius: "8px",
-        border: "2px solid #e9ecef"
-      }}>
+      <div className="signature-section">
         <h3 style={{ 
           color: "#0b2f5a", 
           marginBottom: "15px",
@@ -59,21 +55,14 @@ const AgreementTab = ({
         </p>
 
         {/* Signature Canvas */}
-        <div style={{
-          border: "2px solid #0b2f5a",
-          borderRadius: "8px",
-          backgroundColor: "white",
-          display: "inline-block",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-        }}>
+        <div className="signature-canvas-container">
           <SignatureCanvas
             ref={signatureRef}
             penColor="black"
             canvasProps={{
-              width: 500,
+              width: Math.min(500, window.innerWidth - 320), // Responsive width
               height: 200,
-              className: "signature-canvas",
-              style: { borderRadius: "6px" }
+              className: "signature-canvas"
             }}
             backgroundColor="white"
             onEnd={() => {
