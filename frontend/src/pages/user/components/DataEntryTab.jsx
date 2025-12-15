@@ -106,49 +106,12 @@ const DataEntryTab = ({ userId, apiBase, onEntryComplete }) => {
         if (response.ok) {
           const data = await response.json();
           setSignatureStatus(data);
-        } else if (response.status === 404) {
-          // Use existing user endpoint to check signature
-          try {
-            const userResponse = await fetch(`${apiBase}/api/user/${userId}`);
-            if (userResponse.ok) {
-              const userData = await userResponse.json();
-              const hasSignature = userData.user && userData.user.signature;
-              
-              if (hasSignature) {
-                // Check if admin has approved this signature
-                const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
-                const isApproved = approvedUsers.includes(parseInt(userId));
-                
-                if (isApproved) {
-                  setSignatureStatus({ 
-                    signature_status: 'approved', 
-                    can_access_data_entry: true,
-                    signature_uploaded_at: new Date().toISOString()
-                  });
-                } else {
-                  setSignatureStatus({ 
-                    signature_status: 'pending', 
-                    can_access_data_entry: false,
-                    signature_uploaded_at: new Date().toISOString()
-                  });
-                }
-              } else {
-                // No signature, require signing
-                setSignatureStatus({ 
-                  signature_status: 'not_signed', 
-                  can_access_data_entry: false 
-                });
-              }
-            } else {
-              setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
-            }
-          } catch (err) {
-            console.error("Error checking user signature:", err);
-            setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
-          }
         } else {
-          console.error("Failed to fetch signature status");
-          setSignatureStatus({ signature_status: 'not_signed', can_access_data_entry: false });
+          // If endpoint fails, assume no signature
+          setSignatureStatus({ 
+            signature_status: 'not_signed', 
+            can_access_data_entry: false 
+          });
         }
       } catch (error) {
         console.error("Error checking signature status:", error);

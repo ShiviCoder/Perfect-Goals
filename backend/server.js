@@ -798,6 +798,44 @@ app.get("/api/user-signature/:user_id", async (req, res) => {
   }
 });
 
+// ✅ Route for admin to approve/reject signatures
+app.post("/api/admin/signature-approval/:user_id", async (req, res) => {
+  const userId = req.params.user_id;
+  const { action } = req.body; // 'approve' or 'reject'
+
+  if (!action || !['approve', 'reject'].includes(action)) {
+    return res.status(400).json({ message: "Invalid action. Use 'approve' or 'reject'" });
+  }
+
+  try {
+    let query, values;
+    
+    if (action === 'approve') {
+      query = "UPDATE userregistrations SET signature_status = 'approved', signature_approved_at = CURRENT_TIMESTAMP WHERE id = $1";
+      values = [userId];
+    } else {
+      query = "UPDATE userregistrations SET signature_status = 'rejected', signature_approved_at = NULL WHERE id = $1";
+      values = [userId];
+    }
+
+    const result = await db.query(query, values);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ 
+      success: true, 
+      message: `Signature ${action}d successfully`,
+      action: action,
+      user_id: userId
+    });
+  } catch (err) {
+    console.error("Signature approval error:", err);
+    res.status(500).json({ message: "Database error", error: err.message });
+  }
+});
+
 // PUT /api/admin/extend-submission/:user_id
 app.put("/api/admin/extend-submission/:user_id", async (req, res) => {
   const { user_id } = req.params;

@@ -273,23 +273,24 @@ const UsersModule = ({ users, handleRemove }) => {
   useEffect(() => {
     const loadSignatureStatus = async () => {
       const statusMap = {};
-      const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
       
       for (const user of users) {
         try {
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-          const userRes = await fetch(`${apiUrl}/api/user/${user.id}`);
-          if (userRes.ok) {
-            const userData = await userRes.json();
-            const hasSignature = userData.user && userData.user.signature;
-            const isApproved = approvedUsers.includes(user.id);
-            
+          const signatureRes = await fetch(`${apiUrl}/api/signature-status/${user.id}`);
+          if (signatureRes.ok) {
+            const signatureData = await signatureRes.json();
             statusMap[user.id] = {
-              hasSignature,
-              status: hasSignature ? (isApproved ? 'approved' : 'pending') : 'not_signed'
+              hasSignature: signatureData.signature_status !== 'not_signed',
+              status: signatureData.signature_status,
+              signature_uploaded_at: signatureData.signature_uploaded_at,
+              signature_approved_at: signatureData.signature_approved_at
             };
+          } else {
+            statusMap[user.id] = { hasSignature: false, status: 'not_signed' };
           }
         } catch (err) {
+          console.error(`Error loading signature status for user ${user.id}:`, err);
           statusMap[user.id] = { hasSignature: false, status: 'not_signed' };
         }
       }
@@ -303,31 +304,36 @@ const UsersModule = ({ users, handleRemove }) => {
 
   const handleSignatureApproval = async (userId, action) => {
     try {
-      const approvedUsers = JSON.parse(localStorage.getItem('approvedSignatures') || '[]');
-      
-      if (action === 'approve') {
-        if (!approvedUsers.includes(userId)) {
-          approvedUsers.push(userId);
-          localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${apiUrl}/api/admin/signature-approval/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (action === 'approve') {
+          alert('✅ Signature approved! User can now access data entry.');
+        } else {
+          alert('❌ Signature rejected! User access blocked.');
         }
-        alert('✅ Signature approved! User can now access data entry.');
-      } else if (action === 'reject') {
-        const index = approvedUsers.indexOf(userId);
-        if (index > -1) {
-          approvedUsers.splice(index, 1);
-          localStorage.setItem('approvedSignatures', JSON.stringify(approvedUsers));
-        }
-        alert('❌ Signature rejected! User access blocked.');
+        
+        // Update local state
+        setUserSignatureStatus(prev => ({
+          ...prev,
+          [userId]: {
+            ...prev[userId],
+            status: action === 'approve' ? 'approved' : 'rejected'
+          }
+        }));
+      } else {
+        const error = await response.json();
+        alert(`Error: ${error.message}`);
       }
-      
-      // Update local state
-      setUserSignatureStatus(prev => ({
-        ...prev,
-        [userId]: {
-          ...prev[userId],
-          status: action === 'approve' ? 'approved' : 'pending'
-        }
-      }));
       
     } catch (err) {
       console.error('Error updating signature approval:', err);

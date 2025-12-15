@@ -4,6 +4,12 @@ import { FaBars, FaTimes } from "react-icons/fa";
 const TopNavbar = ({ styles, submissionStatus, user, isSidebarOpen, onToggleSidebar }) => {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   
+  // Extract first name from fullName
+  const getFirstName = (fullName) => {
+    if (!fullName) return "User";
+    return fullName.split(' ')[0]; // Get first word as first name
+  };
+  
   return (
     <header
       style={{
@@ -69,7 +75,7 @@ const TopNavbar = ({ styles, submissionStatus, user, isSidebarOpen, onToggleSide
           >
             {isMobile ? (
               <>
-                Welcome, <strong style={{ color: "#f7941e" }}>{user?.fullName || "User"}</strong>!
+                Welcome, <strong style={{ color: "#f7941e" }}>{getFirstName(user?.fullName)}</strong>!
               </>
             ) : (
               <>
@@ -96,7 +102,7 @@ const TopNavbar = ({ styles, submissionStatus, user, isSidebarOpen, onToggleSide
                 color: "#dde8fc",
               }}
             >
-              Welcome, {user?.fullName || "User"}!
+              Welcome, {getFirstName(user?.fullName)}!
             </span>
           )}
           <img
