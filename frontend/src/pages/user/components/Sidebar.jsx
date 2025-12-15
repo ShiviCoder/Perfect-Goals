@@ -9,9 +9,11 @@ const Sidebar = ({
   isMobile,
   onProfileSelect,
 }) => {
+  const isMobileView = typeof window !== 'undefined' && window.innerWidth <= 768;
+  
   const sidebarStyle = {
     ...styles.sidebar,
-    left: isSidebarOpen ? 0 : "-260px",
+    // Use the styles from UserDashboard that already handle responsive positioning
   };
 
   const navItem = (tab, label, onClick = () => onTabClick(tab)) => (
@@ -27,7 +29,10 @@ const Sidebar = ({
   );
 
   return (
-    <aside style={sidebarStyle}>
+    <aside 
+      style={sidebarStyle}
+      className={isMobileView ? `mobile-sidebar ${isSidebarOpen ? 'open' : ''}` : ''}
+    >
       <div style={styles.logo}>
         <img src={PGLogo} alt="Logo" style={styles.logoImg} />
         <div style={styles.logoText}>Perfect Your Goals</div>
