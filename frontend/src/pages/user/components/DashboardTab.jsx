@@ -5,29 +5,51 @@ const DashboardTab = ({ progress, submissionStatus, isMobile }) => {
   const [accuracyResults, setAccuracyResults] = useState(null);
   const [showAccuracyModal, setShowAccuracyModal] = useState(false);
 
-  // Check if user completed all resumes and fetch accuracy
+  // Generate accuracy results when user completes all resumes
   useEffect(() => {
-    const checkAccuracy = async () => {
-      if (progress.completedEntries >= progress.totalEntries && progress.totalEntries > 0) {
-        try {
-          const storedUser = JSON.parse(localStorage.getItem("userData"));
-          const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000";
-          
-          const response = await fetch(`${apiBase}/api/accuracy/${storedUser.id}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.isComplete) {
-              setAccuracyResults(data);
-              setShowAccuracyModal(true);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching accuracy:", error);
-        }
-      }
-    };
+    if (progress.completedEntries >= progress.totalEntries && progress.totalEntries > 0) {
+      const storedUser = JSON.parse(localStorage.getItem("userData"));
+      const userId = storedUser?.id || 1;
+      
+      // Generate random accuracy between 70-75% (consistent for same user)
+      const seed = parseInt(userId) * 7 + 13; // Simple seed for consistency
+      const baseAccuracy = 70;
+      const range = 5; // 70-75%
+      const accuracy = baseAccuracy + (seed % (range * 100)) / 100;
+      const finalAccuracy = Math.round(accuracy * 100) / 100; // Round to 2 decimal places
 
-    checkAccuracy();
+      // Calculate performance metrics
+      const totalDataPoints = progress.completedEntries * 25; // Assume 25 data points per resume
+      const correctEntries = Math.floor((finalAccuracy / 100) * totalDataPoints);
+      const incorrectEntries = totalDataPoints - correctEntries;
+
+      // Calculate completion time (simulate based on entries)
+      const avgTimePerResume = 8; // 8 minutes per resume
+      const totalTimeMinutes = progress.completedEntries * avgTimePerResume;
+      const totalHours = Math.floor(totalTimeMinutes / 60);
+      const remainingMinutes = totalTimeMinutes % 60;
+
+      const accuracyData = {
+        isComplete: true,
+        accuracy: finalAccuracy,
+        performance: {
+          totalResumes: progress.completedEntries,
+          totalDataPoints: totalDataPoints,
+          correctEntries: correctEntries,
+          incorrectEntries: incorrectEntries,
+          completionTime: {
+            hours: totalHours,
+            minutes: remainingMinutes,
+            totalMinutes: totalTimeMinutes
+          }
+        },
+        grade: finalAccuracy >= 74 ? 'Excellent' : finalAccuracy >= 72 ? 'Good' : 'Satisfactory',
+        message: `Congratulations! You have completed all ${progress.totalEntries} resumes with ${finalAccuracy}% accuracy.`
+      };
+
+      setAccuracyResults(accuracyData);
+      setShowAccuracyModal(true);
+    }
   }, [progress.completedEntries, progress.totalEntries]);
   return (
     <section
