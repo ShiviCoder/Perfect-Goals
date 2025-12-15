@@ -95,6 +95,17 @@ const UserDashboard = () => {
   useEffect(() => {
     const loadAndModifyPDF = async () => {
       try {
+        // ✅ First check if there's a signed PDF in localStorage
+        const savedSignedPDF = localStorage.getItem(`agreementPDF_${storedUser.id}`);
+        
+        if (savedSignedPDF && savedSignedPDF.startsWith("data:application/pdf;base64,")) {
+          console.log("📄 Loading saved signed PDF from localStorage");
+          setPdfURL(savedSignedPDF);
+          return; // Use the saved signed PDF
+        }
+
+        // ✅ If no signed PDF exists, load and modify the original
+        console.log("📄 Loading original PDF and adding user details");
         const response = await fetch("/Agreement.pdf");
         const arrayBuffer = await response.arrayBuffer();
 
@@ -136,11 +147,20 @@ const UserDashboard = () => {
         height: 100,
       });
 
-
       // ✅ Save the modified PDF
       const modifiedPdfBytes = await pdfDoc.save();
       const blob = new Blob([modifiedPdfBytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
+      
+      // ✅ Convert to base64 and save to localStorage for persistence
+      const reader = new FileReader();
+      reader.onload = function() {
+        const base64PDF = reader.result;
+        localStorage.setItem(`agreementPDF_${storedUser.id}`, base64PDF);
+        console.log("✅ Signed PDF saved to localStorage");
+      };
+      reader.readAsDataURL(blob);
+      
       setPdfURL(url);
       alert("PDF updated successfully!");
     } catch (err) {
@@ -164,15 +184,15 @@ const UserDashboard = () => {
     }
   };
 
-  useEffect(() => {
-    const pdfData = localStorage.getItem("agreementPDF");
-    if (pdfData?.startsWith("data:application/pdf;base64,")) {
+  // ✅ Function to clear signed PDF (for re-signing if needed)
+  const clearSignedPDF = () => {
+    localStorage.removeItem(`agreementPDF_${storedUser.id}`);
+    console.log("🗑️ Cleared signed PDF from localStorage");
+    // Reload the original PDF
+    window.location.reload();
+  };
 
-      setPdfURL(pdfData);
-    } else {
-      console.warn("No pdf Found or invalid format")
-    }
-  }, []);
+  // ✅ Removed old localStorage check - now handled in loadAndModifyPDF
  useEffect(() => {
   if (!user_id) return;
  })
@@ -480,6 +500,8 @@ useEffect(() => {
             onDocumentLoadSuccess={onDocumentLoadSuccess}
             addSignatureToPDF={addSignatureToPDF}
             handleSignatureUpload={handleSignatureUpload}
+            clearSignedPDF={clearSignedPDF}
+            userId={storedUser?.id}
           />
         )}
 

@@ -8,9 +8,21 @@ const AgreementTab = ({
   onDocumentLoadSuccess,
   addSignatureToPDF,
   handleSignatureUpload,
+  clearSignedPDF,
+  userId,
 }) => {
   const signatureRef = useRef(null);
   const [signatureData, setSignatureData] = useState(null);
+  const [isAlreadySigned, setIsAlreadySigned] = useState(false);
+
+  // Check if PDF is already signed
+  React.useEffect(() => {
+    if (userId) {
+      const savedSignedPDF = localStorage.getItem(`agreementPDF_${userId}`);
+      setIsAlreadySigned(!!savedSignedPDF);
+    }
+  }, [userId, pdfURL]);
+
   if (!pdfURL) {
     return <p>Loading pdf...</p>;
   }
@@ -46,14 +58,51 @@ const AgreementTab = ({
 
       {/* Digital Signature Pad */}
       <div className="signature-section">
-        <h3 style={{ 
-          color: "#0b2f5a", 
-          marginBottom: "15px",
-          fontSize: "18px",
-          fontWeight: "600"
-        }}>
-          ✍️ Digital Signature
-        </h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+          <h3 style={{ 
+            color: "#0b2f5a", 
+            margin: 0,
+            fontSize: "18px",
+            fontWeight: "600"
+          }}>
+            ✍️ Digital Signature
+          </h3>
+          
+          {isAlreadySigned && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{ 
+                color: "#28a745", 
+                fontSize: "14px", 
+                fontWeight: "600",
+                backgroundColor: "#d4edda",
+                padding: "5px 10px",
+                borderRadius: "4px",
+                border: "1px solid #c3e6cb"
+              }}>
+                ✅ Agreement Signed
+              </span>
+              <button
+                onClick={clearSignedPDF}
+                style={{
+                  padding: "5px 10px",
+                  backgroundColor: "#ffc107",
+                  color: "#212529",
+                  border: "none",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  transition: "background-color 0.3s"
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = "#e0a800"}
+                onMouseOut={(e) => e.target.style.backgroundColor = "#ffc107"}
+                title="Clear signature and re-sign the agreement"
+              >
+                🔄 Re-sign
+              </button>
+            </div>
+          )}
+        </div>
         
         <p style={{ 
           color: "#666", 
