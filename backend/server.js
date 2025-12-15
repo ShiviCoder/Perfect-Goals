@@ -1,3 +1,4 @@
+// Perfect Your Goals Backend Server - Updated with Signature Workflow
 import express from "express";
 import pkg from "pg";
 const { Pool } = pkg;
