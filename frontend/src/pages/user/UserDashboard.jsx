@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { pdfjs } from "react-pdf";
 import "pdfjs-dist/legacy/build/pdf.worker.entry"; // just import, no default
 import { PDFDocument, rgb } from "pdf-lib";
+import { FaBars, FaTimes } from "react-icons/fa";
 import "../../styles/responsive.css";
 import Sidebar from "./components/Sidebar";
 import TopNavbar from "./components/TopNavbar";
@@ -426,6 +427,42 @@ useEffect(() => {
 
   return (
     <div style={styles.dashboard}>
+      {/* Hamburger Menu Button */}
+      <button
+        className="hamburger-menu"
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        style={{
+          position: "fixed",
+          top: "15px",
+          left: "15px",
+          fontSize: "20px",
+          color: "#fff",
+          backgroundColor: "#0b2f5a",
+          border: "none",
+          padding: "12px",
+          borderRadius: "8px",
+          cursor: "pointer",
+          zIndex: 1002,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "48px",
+          height: "48px",
+          transition: "all 0.3s ease"
+        }}
+        onMouseOver={(e) => {
+          e.target.style.backgroundColor = "#083d75";
+          e.target.style.transform = "scale(1.05)";
+        }}
+        onMouseOut={(e) => {
+          e.target.style.backgroundColor = "#0b2f5a";
+          e.target.style.transform = "scale(1)";
+        }}
+      >
+        {isSidebarOpen ? <FaTimes /> : <FaBars />}
+      </button>
+
       {/* Sidebar */}
       <Sidebar
         styles={styles}
@@ -451,7 +488,7 @@ useEffect(() => {
       )}
 
       {/* Main */}
-      <div style={styles.main}>
+      <div className="main-content-mobile" style={styles.main}>
         <TopNavbar
           styles={styles}
           submissionStatus={submissionStatus}
