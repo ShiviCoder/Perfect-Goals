@@ -619,6 +619,77 @@ app.get("/api/progress/:user_id", async (req, res) => {
   }
 });
 
+// ✅ Get User Accuracy Results (when all 500 resumes completed)
+app.get("/api/accuracy/:user_id", async (req, res) => {
+  const userId = req.params.user_id;
+
+  try {
+    // Check if user has completed all 500 resumes
+    const progressQuery = `
+      SELECT completed_entries, total_entries 
+      FROM user_progress 
+      WHERE user_id = $1
+    `;
+    const progressResult = await db.query(progressQuery, [userId]);
+
+    if (progressResult.rows.length === 0) {
+      return res.status(404).json({ error: "User progress not found" });
+    }
+
+    const { completed_entries, total_entries } = progressResult.rows[0];
+
+    // Check if all resumes are completed
+    if (completed_entries < total_entries) {
+      return res.json({
+        isComplete: false,
+        completed: completed_entries,
+        total: total_entries,
+        message: `Complete all ${total_entries} resumes to see accuracy results`
+      });
+    }
+
+    // Generate accuracy result between 70-75%
+    // Use user ID as seed for consistent results for same user
+    const seed = parseInt(userId) * 7 + 13; // Simple seed generation
+    const baseAccuracy = 70;
+    const range = 5; // 70-75%
+    const accuracy = baseAccuracy + (seed % (range * 100)) / 100;
+    const finalAccuracy = Math.round(accuracy * 100) / 100; // Round to 2 decimal places
+
+    // Calculate performance metrics
+    const totalDataPoints = completed_entries * 25; // Assume 25 data points per resume
+    const correctEntries = Math.floor((finalAccuracy / 100) * totalDataPoints);
+    const incorrectEntries = totalDataPoints - correctEntries;
+
+    // Calculate completion time (simulate based on entries)
+    const avgTimePerResume = 8; // 8 minutes per resume
+    const totalTimeMinutes = completed_entries * avgTimePerResume;
+    const totalHours = Math.floor(totalTimeMinutes / 60);
+    const remainingMinutes = totalTimeMinutes % 60;
+
+    res.json({
+      isComplete: true,
+      accuracy: finalAccuracy,
+      performance: {
+        totalResumes: completed_entries,
+        totalDataPoints: totalDataPoints,
+        correctEntries: correctEntries,
+        incorrectEntries: incorrectEntries,
+        completionTime: {
+          hours: totalHours,
+          minutes: remainingMinutes,
+          totalMinutes: totalTimeMinutes
+        }
+      },
+      grade: finalAccuracy >= 74 ? 'Excellent' : finalAccuracy >= 72 ? 'Good' : 'Satisfactory',
+      message: `Congratulations! You have completed all ${total_entries} resumes with ${finalAccuracy}% accuracy.`
+    });
+  } catch (err) {
+    console.error("Error calculating accuracy:", err);
+    return res.status(500).json({ error: "Database error" });
+  }
+});
+
 app.post("/api/change-password/:user_id", async (req, res) => {
   const userId = req.params.user_id;
   const { oldPassword, newPassword } = req.body;

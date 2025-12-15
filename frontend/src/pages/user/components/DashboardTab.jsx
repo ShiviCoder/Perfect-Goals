@@ -1,7 +1,34 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import InfoCards from "../InfoCards";
 
 const DashboardTab = ({ progress, submissionStatus, isMobile }) => {
+  const [accuracyResults, setAccuracyResults] = useState(null);
+  const [showAccuracyModal, setShowAccuracyModal] = useState(false);
+
+  // Check if user completed all resumes and fetch accuracy
+  useEffect(() => {
+    const checkAccuracy = async () => {
+      if (progress.completedEntries >= progress.totalEntries && progress.totalEntries > 0) {
+        try {
+          const storedUser = JSON.parse(localStorage.getItem("userData"));
+          const apiBase = import.meta.env.VITE_API_URL || "http://localhost:5000";
+          
+          const response = await fetch(`${apiBase}/api/accuracy/${storedUser.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.isComplete) {
+              setAccuracyResults(data);
+              setShowAccuracyModal(true);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching accuracy:", error);
+        }
+      }
+    };
+
+    checkAccuracy();
+  }, [progress.completedEntries, progress.totalEntries]);
   return (
     <section
       style={{
@@ -210,11 +237,173 @@ const DashboardTab = ({ progress, submissionStatus, isMobile }) => {
             boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           }}
         >
-          {/* Placeholder for additional charts or stats */}
+          {/* Accuracy Results Section */}
+          {progress.completedEntries >= progress.totalEntries && progress.totalEntries > 0 ? (
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#4caf50", marginBottom: "10px" }}>
+                🎉 All Resumes Completed!
+              </div>
+              <button
+                onClick={() => setShowAccuracyModal(true)}
+                style={{
+                  backgroundColor: "#4caf50",
+                  color: "white",
+                  border: "none",
+                  padding: "12px 24px",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "background-color 0.3s",
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = "#45a049"}
+                onMouseOut={(e) => e.target.style.backgroundColor = "#4caf50"}
+              >
+                📊 View Accuracy Results
+              </button>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", color: "#666" }}>
+              <div style={{ fontSize: "16px", marginBottom: "10px" }}>
+                📈 Progress Tracking
+              </div>
+              <div style={{ fontSize: "14px" }}>
+                Complete all {progress.totalEntries} resumes to see your accuracy results
+              </div>
+              <div style={{ marginTop: "10px", fontSize: "24px", fontWeight: "bold", color: "#3f6272" }}>
+                {Math.round((progress.completedEntries / progress.totalEntries) * 100) || 0}%
+              </div>
+              <div style={{ fontSize: "12px", color: "#888" }}>
+                {progress.completedEntries} of {progress.totalEntries} completed
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       <InfoCards />
+
+      {/* Accuracy Results Modal */}
+      {showAccuracyModal && accuracyResults && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+            padding: "20px",
+          }}
+          onClick={() => setShowAccuracyModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              borderRadius: "16px",
+              padding: "30px",
+              maxWidth: "500px",
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ textAlign: "center", marginBottom: "25px" }}>
+              <div style={{ fontSize: "48px", marginBottom: "10px" }}>🎉</div>
+              <h2 style={{ color: "#4caf50", margin: "0 0 10px 0", fontSize: "24px" }}>
+                Congratulations!
+              </h2>
+              <p style={{ color: "#666", margin: 0, fontSize: "16px" }}>
+                You have completed all {accuracyResults.performance.totalResumes} resumes
+              </p>
+            </div>
+
+            {/* Accuracy Score */}
+            <div
+              style={{
+                textAlign: "center",
+                backgroundColor: "#f8f9fa",
+                borderRadius: "12px",
+                padding: "20px",
+                marginBottom: "20px",
+              }}
+            >
+              <div style={{ fontSize: "14px", color: "#666", marginBottom: "5px" }}>
+                Your Accuracy Score
+              </div>
+              <div style={{ fontSize: "48px", fontWeight: "bold", color: "#4caf50" }}>
+                {accuracyResults.accuracy}%
+              </div>
+              <div style={{ fontSize: "16px", color: "#4caf50", fontWeight: "600" }}>
+                {accuracyResults.grade}
+              </div>
+            </div>
+
+            {/* Performance Details */}
+            <div style={{ marginBottom: "20px" }}>
+              <h3 style={{ fontSize: "18px", color: "#333", marginBottom: "15px" }}>
+                📊 Performance Details
+              </h3>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                <div style={{ textAlign: "center", padding: "10px", backgroundColor: "#e8f5e8", borderRadius: "8px" }}>
+                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#4caf50" }}>
+                    {accuracyResults.performance.correctEntries.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#666" }}>Correct Entries</div>
+                </div>
+                <div style={{ textAlign: "center", padding: "10px", backgroundColor: "#fff3e0", borderRadius: "8px" }}>
+                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#ff9800" }}>
+                    {accuracyResults.performance.incorrectEntries.toLocaleString()}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#666" }}>Incorrect Entries</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Time Statistics */}
+            <div style={{ marginBottom: "25px" }}>
+              <h3 style={{ fontSize: "18px", color: "#333", marginBottom: "15px" }}>
+                ⏱️ Time Statistics
+              </h3>
+              <div style={{ textAlign: "center", padding: "15px", backgroundColor: "#f0f7ff", borderRadius: "8px" }}>
+                <div style={{ fontSize: "24px", fontWeight: "bold", color: "#2196f3" }}>
+                  {accuracyResults.performance.completionTime.hours}h {accuracyResults.performance.completionTime.minutes}m
+                </div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Total Completion Time</div>
+              </div>
+            </div>
+
+            {/* Close Button */}
+            <div style={{ textAlign: "center" }}>
+              <button
+                onClick={() => setShowAccuracyModal(false)}
+                style={{
+                  backgroundColor: "#4caf50",
+                  color: "white",
+                  border: "none",
+                  padding: "12px 30px",
+                  borderRadius: "8px",
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "background-color 0.3s",
+                }}
+                onMouseOver={(e) => e.target.style.backgroundColor = "#45a049"}
+                onMouseOut={(e) => e.target.style.backgroundColor = "#4caf50"}
+              >
+                ✨ Awesome!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
