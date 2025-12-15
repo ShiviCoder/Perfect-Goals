@@ -1,20 +1,6 @@
 /* Responsive Design System for Perfect Your Goals */
 
-/* Hamburger Menu - Mobile Only */
-.hamburger-menu {
-  display: none !important;
-}
-
-@media (max-width: 768px) {
-  .hamburger-menu {
-    display: flex !important;
-  }
-  
-  /* Add padding to main content to avoid hamburger overlap */
-  .main-content-mobile {
-    padding-top: 70px !important;
-  }
-}
+/* Hamburger Menu - Now integrated in navbar */
 
 /* Base responsive breakpoints */
 :root {

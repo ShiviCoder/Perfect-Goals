@@ -1,7 +1,9 @@
 import React from "react";
-import { FaBars } from "react-icons/fa";
+import { FaBars, FaTimes } from "react-icons/fa";
 
-const TopNavbar = ({ styles, submissionStatus, isMobile, user, onOpenSidebar }) => {
+const TopNavbar = ({ styles, submissionStatus, user, isSidebarOpen, onToggleSidebar }) => {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  
   return (
     <header
       style={{
@@ -32,12 +34,30 @@ const TopNavbar = ({ styles, submissionStatus, isMobile, user, onOpenSidebar }) 
           }}
         >
           {isMobile && (
-            <FaBars
-              size={22}
-              color="white"
-              style={{ cursor: "pointer", flexShrink: 0 }}
-              onClick={onOpenSidebar}
-            />
+            <button
+              onClick={onToggleSidebar}
+              style={{
+                background: "none",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                padding: "8px",
+                borderRadius: "4px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background-color 0.3s ease",
+                flexShrink: 0,
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = "transparent";
+              }}
+            >
+              {isSidebarOpen ? <FaTimes size={20} /> : <FaBars size={20} />}
+            </button>
           )}
           <span
             style={{
