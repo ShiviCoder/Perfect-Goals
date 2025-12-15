@@ -682,9 +682,11 @@
 
 /* Agreement Tab Responsive Styles */
 .agreement-tab-container {
-  padding: 10px;
+  padding: 15px;
   max-width: 100%;
-  overflow-x: auto;
+  overflow-x: hidden;
+  height: calc(100vh - 120px);
+  overflow-y: auto;
 }
 
 @media (min-width: 768px) {
@@ -697,38 +699,47 @@
 .agreement-pdf-container {
   display: flex;
   justify-content: center;
-  margin-bottom: 20px;
-  overflow-x: auto;
+  margin-bottom: 30px;
+  width: 100%;
 }
 
 .agreement-pdf-container .react-pdf__Document {
-  max-width: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .agreement-pdf-container .react-pdf__Page {
-  margin-bottom: 10px !important;
-  max-width: 100% !important;
+  margin-bottom: 15px !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
 }
 
-@media (max-width: 768px) {
-  .agreement-pdf-container .react-pdf__Page canvas {
-    max-width: 100% !important;
-    height: auto !important;
-  }
+.agreement-pdf-container .react-pdf__Page canvas {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+  display: block !important;
 }
 
 /* Signature Section Responsive */
 .signature-section {
-  margin-top: 30px;
-  padding: 15px;
+  margin-top: 20px;
+  padding: 20px;
   background-color: #f8f9fa;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 2px solid #e9ecef;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-@media (min-width: 768px) {
+@media (max-width: 768px) {
   .signature-section {
-    padding: 20px;
+    padding: 15px;
+    margin-top: 15px;
   }
 }
 
@@ -736,21 +747,25 @@
   border: 2px solid #0b2f5a;
   border-radius: 8px;
   background-color: white;
-  display: block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
-  max-width: 600px;
+  max-width: 700px;
+  margin: 0 auto;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   overflow: hidden;
+  min-height: 150px;
 }
 
 .signature-canvas {
-  width: 100% !important;
-  max-width: 100% !important;
-  display: block;
+  display: block !important;
+  border-radius: 6px !important;
 }
 
 @media (max-width: 768px) {
   .signature-canvas-container {
     max-width: 100%;
+    min-height: 120px;
   }
 }

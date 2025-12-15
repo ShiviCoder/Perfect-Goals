@@ -23,15 +23,24 @@ const AgreementTab = ({
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={(error) => console.error("PDF load error:", error)}
         >
-          {Array.from(new Array(numPages || 0), (_, index) => (
-            <Page
-              key={`page_${index + 1}`}
-              pageNumber={index + 1}
-              width={Math.min(800, window.innerWidth - 280)} // Responsive width
-              renderTextLayer={false}
-              renderAnnotationLayer={false}
-            />
-          ))}
+          {Array.from(new Array(numPages || 0), (_, index) => {
+            // Calculate better responsive width
+            const isMobile = window.innerWidth <= 768;
+            const sidebarWidth = isMobile ? 0 : 220; // Sidebar width on desktop
+            const padding = 40; // Container padding
+            const availableWidth = window.innerWidth - sidebarWidth - padding;
+            const pdfWidth = Math.min(900, Math.max(400, availableWidth * 0.9)); // Better responsive calculation
+            
+            return (
+              <Page
+                key={`page_${index + 1}`}
+                pageNumber={index + 1}
+                width={pdfWidth}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
+              />
+            );
+          })}
         </Document>
       </div>
 
@@ -60,8 +69,8 @@ const AgreementTab = ({
             ref={signatureRef}
             penColor="black"
             canvasProps={{
-              width: Math.min(500, window.innerWidth - 320), // Responsive width
-              height: 200,
+              width: Math.min(600, Math.max(300, window.innerWidth - 100)), // Better responsive width
+              height: 150, // Reduced height from 200 to 150
               className: "signature-canvas"
             }}
             backgroundColor="white"
