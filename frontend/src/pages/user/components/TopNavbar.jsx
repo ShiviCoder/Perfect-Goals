@@ -67,8 +67,16 @@ const TopNavbar = ({ styles, submissionStatus, user, isSidebarOpen, onToggleSide
               textOverflow: "ellipsis",
             }}
           >
-            Submission End Date:{" "}
-            <strong style={{ color: "#f7941e" }}>{submissionStatus}</strong>
+            {isMobile ? (
+              <>
+                Welcome, <strong style={{ color: "#f7941e" }}>{user?.fullName || "User"}</strong>!
+              </>
+            ) : (
+              <>
+                Submission End Date:{" "}
+                <strong style={{ color: "#f7941e" }}>{submissionStatus}</strong>
+              </>
+            )}
           </span>
         </div>
 
@@ -85,6 +93,7 @@ const TopNavbar = ({ styles, submissionStatus, user, isSidebarOpen, onToggleSide
               style={{
                 fontSize: "14px",
                 whiteSpace: "nowrap",
+                color: "#dde8fc",
               }}
             >
               Welcome, {user?.fullName || "User"}!
