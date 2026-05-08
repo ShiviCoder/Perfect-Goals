@@ -8,12 +8,20 @@ import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 
-dotenv.config();
-
 // Get __dirname equivalent for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Load environment variables from the absolute path
+const envPath = path.join(__dirname, ".env");
+console.log("📂 Current directory:", __dirname);
+console.log("📂 Attempting to load .env from:", envPath);
+
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+  console.error("❌ CRITICAL: .env file NOT found at", envPath);
+}
 const upload = multer();
 
 const app = express();
@@ -23,7 +31,7 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
+
   // Handle preflight OPTIONS request
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -36,8 +44,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/ping", (req, res) => {
-  res.json({ 
-    message: "pong", 
+  res.json({
+    message: "pong",
     env: process.env.NODE_ENV,
     timestamp: new Date().toISOString(),
     version: "signature-approval-v1"
@@ -62,16 +70,16 @@ app.get("/migrate-signature-columns", async (req, res) => {
       WHERE signature IS NULL AND signature_status = 'pending'
     `);
 
-    res.json({ 
-      success: true, 
-      message: "✅ Signature columns added successfully!" 
+    res.json({
+      success: true,
+      message: "✅ Signature columns added successfully!"
     });
   } catch (err) {
     console.error("Migration error:", err);
-    res.status(500).json({ 
-      success: false, 
-      message: "❌ Migration failed", 
-      error: err.message 
+    res.status(500).json({
+      success: false,
+      message: "❌ Migration failed",
+      error: err.message
     });
   }
 });
@@ -85,7 +93,7 @@ app.get("/add-admin", async (req, res) => {
       ON CONFLICT (username) DO NOTHING
     `);
 
-    res.json({ 
+    res.json({
       message: "✅ Admin user 'AnkitPatel' added successfully!",
       username: "AnkitPatel"
     });
@@ -232,7 +240,7 @@ app.get("/setup-database", async (req, res) => {
       // Don't fail the whole setup if migration fails
     }
 
-    res.json({ 
+    res.json({
       message: "✅ Database tables created successfully!",
       tables: ["admins", "userregistrations", "user_progress", "data_entries"],
       migrations: ["signature_approval_columns"]
@@ -249,8 +257,23 @@ console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
 console.log("NODE_ENV:", process.env.NODE_ENV);
 console.log("DATABASE_URL (first 50 chars):", process.env.DATABASE_URL ? process.env.DATABASE_URL.substring(0, 50) + "..." : "NOT SET");
 
+if (!process.env.DATABASE_URL && !process.env.DB_PASSWORD) {
+  console.error("❌ ERROR: DB_PASSWORD is not defined in .env file.");
+  console.log("💡 Please ensure your .env file contains: DB_PASSWORD=your_password");
+}
+
+const poolConfig = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL }
+  : {
+    user: process.env.DB_USER || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    database: process.env.DB_NAME || 'perfectgoal',
+    password: String(process.env.DB_PASSWORD || ""),
+    port: parseInt(String(process.env.DB_PORT || '5432')),
+  };
+
 const db = new Pool({
-  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'perfectgoal'}`,
+  ...poolConfig,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
@@ -365,7 +388,7 @@ app.post("/register", async (req, res) => {
 
 app.post("/api/progress/complete/:user_id", async (req, res) => {
   const userId = req.params.user_id;
-  
+
   try {
     await db.query(
       "UPDATE user_progress SET completed_entries = completed_entries + 1 WHERE user_id = $1",
@@ -382,7 +405,7 @@ app.get("/api/resumes", (req, res) => {
   // Check which resumes actually exist
   const resumesDir = path.join(__dirname, "resumes");
   const existingResumes = [];
-  
+
   // Check for resumes 1-500
   for (let i = 1; i <= 500; i++) {
     const resumePath = path.join(resumesDir, `resume_${i}.pdf`);
@@ -392,10 +415,10 @@ app.get("/api/resumes", (req, res) => {
       existingResumes.push({ id: i, exists: false });
     }
   }
-  
+
   const availableResumes = existingResumes.filter(r => r.exists).map(r => ({ id: r.id }));
-  
-  res.json({ 
+
+  res.json({
     resumes: availableResumes.length > 0 ? availableResumes : Array.from({ length: 500 }, (_, i) => ({ id: i + 1 })),
     totalAvailable: availableResumes.length,
     resumesDir: resumesDir
@@ -405,37 +428,37 @@ app.get("/api/resumes", (req, res) => {
 // ✅ Get Single Resume PDF Endpoint
 app.get("/api/resumes/:resumeId/pdf", (req, res) => {
   const resumeId = req.params.resumeId;
-  
+
   const resumePath = path.join(__dirname, "resumes", `resume_${resumeId}.pdf`);
-  
+
   console.log(`📄 Attempting to serve resume ${resumeId} from: ${resumePath}`);
-  
+
   if (!fs.existsSync(resumePath)) {
     console.error(`❌ Resume ${resumeId} not found at: ${resumePath}`);
-    return res.status(404).json({ 
+    return res.status(404).json({
       error: `Resume ${resumeId} not found. Please ensure resume_${resumeId}.pdf exists in backend/resumes/ folder.`,
       path: resumePath
     });
   }
-  
+
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename="resume_${resumeId}.pdf"`);
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET");
-  
+
   const fileStream = fs.createReadStream(resumePath);
-  
+
   fileStream.on("error", (err) => {
     console.error(`❌ Error reading resume ${resumeId}:`, err);
     if (!res.headersSent) {
       res.status(500).json({ error: "Error reading PDF file", details: err.message });
     }
   });
-  
+
   fileStream.on("open", () => {
     console.log(`✅ Successfully serving resume ${resumeId}`);
   });
-  
+
   fileStream.pipe(res);
 });
 
@@ -487,9 +510,9 @@ app.post("/api/data-entry", async (req, res) => {
   // Validate required fields
   console.log("📦 Received data:", { resumeId, userId, firstName, lastName, mobile, email });
   console.log("📦 Full request body:", req.body);
-  
+
   const isValidField = (field) => field && field.trim() !== "" && field.trim() !== "NA";
-  
+
   if (!resumeId || !userId || !isValidField(firstName) || !isValidField(lastName) || !isValidField(mobile) || !isValidField(email)) {
     console.log("❌ Validation failed:", {
       resumeId,
@@ -505,7 +528,7 @@ app.post("/api/data-entry", async (req, res) => {
       hasMobile: isValidField(mobile),
       hasEmail: isValidField(email)
     });
-    return res.status(400).json({ 
+    return res.status(400).json({
       error: "Missing required fields",
       details: "Required fields must be filled: firstName, lastName, mobile, email (cannot be empty or 'NA')"
     });
@@ -532,16 +555,16 @@ app.post("/api/data-entry", async (req, res) => {
 
     const result = await db.query(query, [
       resumeId, userId,
-      firstName || "NA", middleName || "NA", lastName || "NA", dob || "NA", gender || "NA", 
-      nationality || "NA", maritalStatus || "NA", passport || "NA", hobbies || "NA", 
-      languagesKnown || "NA", address || "NA", landmark || "NA", city || "NA", state || "NA", 
+      firstName || "NA", middleName || "NA", lastName || "NA", dob || "NA", gender || "NA",
+      nationality || "NA", maritalStatus || "NA", passport || "NA", hobbies || "NA",
+      languagesKnown || "NA", address || "NA", landmark || "NA", city || "NA", state || "NA",
       pincode || "NA", mobile || "NA", email || "NA",
       sscResult || "NA", sscBoard || "NA", sscPassingYear || "NA", sscDiploma || "NA",
       hscResult || "NA", hscBoard || "NA", hscPassingYear || "NA", hscDiploma || "NA",
       graduationDegree || "NA", graduationYear || "NA", graduationResult || "NA", graduationUniversity || "NA",
-      postGraduationDegree || "NA", postGraduationYear || "NA", postGraduationResult || "NA", 
+      postGraduationDegree || "NA", postGraduationYear || "NA", postGraduationResult || "NA",
       postGraduationUniversity || "NA", higherEducation || "NA",
-      totalExperienceYears || "NA", totalExperienceMonths || "NA", totalCompaniesWorked || "NA", 
+      totalExperienceYears || "NA", totalExperienceMonths || "NA", totalCompaniesWorked || "NA",
       lastCurrentEmployer || "NA"
     ]);
 
@@ -551,9 +574,9 @@ app.post("/api/data-entry", async (req, res) => {
       [userId]
     );
 
-    res.json({ 
-      message: "Data entry saved successfully", 
-      entryId: result.rows[0].id 
+    res.json({
+      message: "Data entry saved successfully",
+      entryId: result.rows[0].id
     });
   } catch (err) {
     console.error("Data entry error:", err);
@@ -810,7 +833,7 @@ app.post("/api/admin/signature-approval/:user_id", async (req, res) => {
 
   try {
     let query, values;
-    
+
     if (action === 'approve') {
       query = "UPDATE userregistrations SET signature_status = 'approved', signature_approved_at = CURRENT_TIMESTAMP WHERE id = $1";
       values = [userId];
@@ -820,13 +843,13 @@ app.post("/api/admin/signature-approval/:user_id", async (req, res) => {
     }
 
     const result = await db.query(query, values);
-    
+
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: `Signature ${action}d successfully`,
       action: action,
       user_id: userId
@@ -917,7 +940,7 @@ app.get("/api/admin/signatures", async (req, res) => {
       FROM userregistrations u
       ORDER BY u.signature_uploaded_at DESC NULLS LAST
     `;
-    
+
     const result = await db.query(query);
     res.json({ signatures: result.rows });
   } catch (err) {
