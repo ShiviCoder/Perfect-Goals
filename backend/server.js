@@ -1,4 +1,4 @@
-// Perfect Your Goals Backend Server - Updated & Fixed Version
+// Perfect Your Goals Backend Server - Full Updated Version
 
 import express from "express";
 import pkg from "pg";
@@ -8,7 +8,6 @@ import multer from "multer";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import fs from "fs";
 import cors from "cors";
 
 // ======================
@@ -20,12 +19,7 @@ const __dirname = path.dirname(__filename);
 // ======================
 // Load .env
 // ======================
-const envPath = path.join(__dirname, ".env");
-
-console.log("📂 Current directory:", __dirname);
-console.log("📂 Loading .env from:", envPath);
-
-dotenv.config({ path: envPath });
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 // ======================
 // Express App
@@ -51,7 +45,7 @@ app.get("/", (req, res) => {
 app.get("/ping", (req, res) => {
   res.json({
     message: "pong",
-    env: process.env.NODE_ENV,
+    env: process.env.NODE_ENV || "development",
     timestamp: new Date().toISOString(),
   });
 });
@@ -92,7 +86,7 @@ db.connect()
   });
 
 // ======================
-// Setup Database
+// SETUP DATABASE
 // ======================
 app.get("/setup-database", async (req, res) => {
   try {
@@ -142,7 +136,14 @@ app.get("/setup-database", async (req, res) => {
           CHECK (access IN ('granted', 'denied')),
 
         signature_status VARCHAR(20) DEFAULT 'pending'
-          CHECK (signature_status IN ('pending', 'approved', 'rejected', 'not_signed')),
+          CHECK (
+            signature_status IN (
+              'pending',
+              'approved',
+              'rejected',
+              'not_signed'
+            )
+          ),
 
         signature_uploaded_at TIMESTAMP,
         signature_approved_at TIMESTAMP
@@ -249,7 +250,7 @@ app.get("/setup-database", async (req, res) => {
     `);
 
     // ======================
-    // Insert Default Admins
+    // DEFAULT ADMINS
     // ======================
     await db.query(`
       INSERT INTO admins (username, password, role)
@@ -269,98 +270,10 @@ app.get("/setup-database", async (req, res) => {
     });
 
   } catch (err) {
+
     console.error("❌ Setup Database Error:", err);
 
     res.status(500).json({
-      success: false,
-      error: err.message,
-    });
-  }
-});
-
-// ======================
-// LOGIN
-// ======================
-app.post("/login", async (req, res) => {
-
-  const { username, password } = req.body;
-
-  try {
-
-    // ======================
-    // ADMIN LOGIN
-    // ======================
-    const adminResult = await db.query(
-      `SELECT id, username, role
-       FROM admins
-       WHERE username = $1 AND password = $2`,
-      [username, password]
-    );
-
-    if (adminResult.rows.length > 0) {
-
-      const admin = adminResult.rows[0];
-
-      return res.json({
-        success: true,
-        message: "✅ Admin Login Successful!",
-        user: {
-          id: admin.id,
-          username: admin.username,
-          role: admin.role,
-        },
-      });
-    }
-
-    // ======================
-    // USER LOGIN
-    // ======================
-    const userResult = await db.query(
-      `
-      SELECT 
-        id,
-        username,
-        "fullName",
-        email,
-        address,
-        "contactNumber",
-        "alternateNumber",
-        dob,
-        "accountNumber",
-        "bankName",
-        "branchName",
-        "ifscCode",
-        access,
-        signature_status
-      FROM userregistrations
-      WHERE username = $1
-      AND password = $2
-      `,
-      [username, password]
-    );
-
-    if (userResult.rows.length > 0) {
-
-      return res.json({
-        success: true,
-        message: "✅ User Login Successful!",
-        user: {
-          ...userResult.rows[0],
-          role: "user",
-        },
-      });
-    }
-
-    return res.status(401).json({
-      success: false,
-      message: "❌ Invalid Username or Password",
-    });
-
-  } catch (err) {
-
-    console.error("❌ Login Error:", err);
-
-    return res.status(500).json({
       success: false,
       error: err.message,
     });
@@ -385,7 +298,20 @@ app.post("/register", async (req, res) => {
 
   try {
 
-    const userResult = await db.query(
+    // CHECK USER EXISTS
+    const existingUser = await db.query(
+      `SELECT id FROM userregistrations WHERE username = $1`,
+      [username]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Username Already Exists",
+      });
+    }
+
+    const result = await db.query(
       `
       INSERT INTO userregistrations (
         "fullName",
@@ -412,9 +338,9 @@ app.post("/register", async (req, res) => {
       ]
     );
 
-    const userId = userResult.rows[0].id;
+    const userId = result.rows[0].id;
 
-    // Create Progress Record
+    // CREATE USER PROGRESS
     await db.query(
       `
       INSERT INTO user_progress (
@@ -433,7 +359,7 @@ app.post("/register", async (req, res) => {
 
     res.json({
       success: true,
-      message: "✅ Registration Successful!",
+      message: "✅ Registration Successful",
       user_id: userId,
     });
 
@@ -449,27 +375,82 @@ app.post("/register", async (req, res) => {
 });
 
 // ======================
-// GET USERS
+// LOGIN
+// ======================
+app.post("/login", async (req, res) => {
+
+  const { username, password } = req.body;
+
+  try {
+
+    // ADMIN LOGIN
+    const adminResult = await db.query(
+      `
+      SELECT id, username, role
+      FROM admins
+      WHERE username = $1
+      AND password = $2
+      `,
+      [username, password]
+    );
+
+    if (adminResult.rows.length > 0) {
+
+      return res.json({
+        success: true,
+        message: "✅ Admin Login Successful",
+        user: adminResult.rows[0],
+      });
+    }
+
+    // USER LOGIN
+    const userResult = await db.query(
+      `
+      SELECT *
+      FROM userregistrations
+      WHERE username = $1
+      AND password = $2
+      `,
+      [username, password]
+    );
+
+    if (userResult.rows.length > 0) {
+
+      return res.json({
+        success: true,
+        message: "✅ User Login Successful",
+        user: {
+          ...userResult.rows[0],
+          role: "user",
+        },
+      });
+    }
+
+    res.status(401).json({
+      success: false,
+      message: "❌ Invalid Username or Password",
+    });
+
+  } catch (err) {
+
+    console.error("❌ Login Error:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// ======================
+// GET ALL USERS
 // ======================
 app.get("/api/users", async (req, res) => {
 
   try {
 
     const result = await db.query(`
-      SELECT
-        id,
-        "fullName",
-        email,
-        username,
-        "contactNumber",
-        address,
-        dob,
-        "registrationDate",
-        "accountNumber",
-        "bankName",
-        "branchName",
-        "ifscCode",
-        signature_status
+      SELECT *
       FROM userregistrations
       ORDER BY id DESC
     `);
@@ -487,19 +468,15 @@ app.get("/api/users", async (req, res) => {
 });
 
 // ======================
-// GET USER BY ID
+// GET SINGLE USER
 // ======================
-app.get("/api/user/:user_id", async (req, res) => {
+app.get("/api/user/:id", async (req, res) => {
 
   try {
 
     const result = await db.query(
-      `
-      SELECT *
-      FROM userregistrations
-      WHERE id = $1
-      `,
-      [req.params.user_id]
+      `SELECT * FROM userregistrations WHERE id = $1`,
+      [req.params.id]
     );
 
     if (result.rows.length === 0) {
@@ -508,9 +485,7 @@ app.get("/api/user/:user_id", async (req, res) => {
       });
     }
 
-    res.json({
-      user: result.rows[0],
-    });
+    res.json(result.rows[0]);
 
   } catch (err) {
 
@@ -600,7 +575,7 @@ app.post(
 );
 
 // ======================
-// SIGNATURE STATUS
+// GET SIGNATURE STATUS
 // ======================
 app.get("/api/signature-status/:user_id", async (req, res) => {
 
@@ -637,7 +612,7 @@ app.get("/api/signature-status/:user_id", async (req, res) => {
 });
 
 // ======================
-// ADMIN SIGNATURE APPROVAL
+// APPROVE / REJECT SIGNATURE
 // ======================
 app.put("/api/admin/signature-approval/:user_id", async (req, res) => {
 
