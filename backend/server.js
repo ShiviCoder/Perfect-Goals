@@ -734,6 +734,59 @@ app.get("/api/user-signature/:user_id", async (req, res) => {
   }
 });
 
+
+// ======================
+// ADD ADMIN
+// ======================
+app.post("/add-admin", async (req, res) => {
+
+  const { username, password } = req.body;
+
+  try {
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and Password required",
+      });
+    }
+
+    const existingAdmin = await db.query(
+      `SELECT id FROM admins WHERE username = $1`,
+      [username]
+    );
+
+    if (existingAdmin.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Admin already exists",
+      });
+    }
+
+    await db.query(
+      `
+      INSERT INTO admins (username, password, role)
+      VALUES ($1, $2, 'admin')
+      `,
+      [username, password]
+    );
+
+    res.json({
+      success: true,
+      message: "✅ Admin Added Successfully",
+    });
+
+  } catch (err) {
+
+    console.error("❌ Add Admin Error:", err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
 // ======================
 // SERVER START
 // ======================
