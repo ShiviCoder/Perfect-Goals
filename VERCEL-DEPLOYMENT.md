@@ -1,7 +1,7 @@
 # Vercel Frontend Deployment Guide
 
 ## Current Status
-- ✅ Backend deployed on Render: `https://perfect-goals.onrender.com`
+- ✅ Backend deployed on Render: `https://perfect-goals-15mr.onrender.com`
 - ✅ Frontend deployed on Vercel: `https://perfect-goals.vercel.app`
 - ✅ Code updated to use environment variables
 
@@ -24,7 +24,7 @@ To ensure the frontend connects to the correct backend, you need to set the envi
    - Click "Add New" button
    - Set the following:
      - **Name**: `VITE_API_URL`
-     - **Value**: `https://perfect-goals.onrender.com`
+     - **Value**: `https://perfect-goals-15mr.onrender.com`
      - **Environment**: Select "Production", "Preview", and "Development"
 
 4. **Redeploy**
@@ -45,7 +45,7 @@ After setting the environment variable and redeploying:
 3. **Check Browser Console**:
    - Open Developer Tools (F12)
    - Look for API URL logs in console
-   - Should show: `https://perfect-goals.onrender.com`
+   - Should show: `https://perfect-goals-15mr.onrender.com`
 
 ## Troubleshooting
 
@@ -53,11 +53,11 @@ After setting the environment variable and redeploying:
 1. Check browser console for API URL being used
 2. Verify environment variable is set in Vercel
 3. Ensure latest deployment includes the environment variable
-4. Test backend directly: https://perfect-goals.onrender.com/ping
+4. Test backend directly: https://perfect-goals-15mr.onrender.com/ping
 
 ### If environment variable not working:
 1. Make sure variable name is exactly: `VITE_API_URL`
-2. Make sure value is exactly: `https://perfect-goals.onrender.com`
+2. Make sure value is exactly: `https://perfect-goals-15mr.onrender.com`
 3. Redeploy after setting the variable
 4. Clear browser cache and try again
 
@@ -72,5 +72,5 @@ This file is already created and ignored by git.
 
 ## Production URLs
 - **Frontend**: https://perfect-goals.vercel.app
-- **Backend**: https://perfect-goals.onrender.com
-- **Backend API Test**: https://perfect-goals.onrender.com/ping
+- **Backend**: https://perfect-goals-15mr.onrender.com
+- **Backend API Test**: https://perfect-goals-15mr.onrender.com/ping

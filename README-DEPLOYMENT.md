@@ -51,7 +51,7 @@
 2. Import your GitHub repository
 3. Add environment variable:
    ```
-   VITE_API_URL=<your Railway backend URL>
+   VITE_API_URL=https://perfect-goals-15mr.onrender.com
    ```
 4. Deploy!
 5. Go back to Railway and update `FRONTEND_URL` with your Vercel URL

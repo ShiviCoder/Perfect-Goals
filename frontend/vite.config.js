@@ -21,6 +21,6 @@ export default defineConfig({
     }
   },
   define: {
-    __VITE_API_URL__: JSON.stringify(process.env.VITE_API_URL || 'http://localhost:5000')
+    __VITE_API_URL__: JSON.stringify(process.env.VITE_API_URL || 'https://perfect-goals-15mr.onrender.com')
   }
 })

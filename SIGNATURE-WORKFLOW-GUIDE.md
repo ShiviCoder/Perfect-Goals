@@ -306,7 +306,7 @@ Response: Binary signature image data
 
 ### Environment Variables
 ```
-VITE_API_URL=https://perfect-goals.onrender.com
+VITE_API_URL=https://perfect-goals-15mr.onrender.com
 DATABASE_URL=postgresql://...
 ```
 

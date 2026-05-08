@@ -89,7 +89,7 @@ Look for these mobile-specific elements:
 
 4. **Verify Environment Variable**:
    - Check if `VITE_API_URL` is set correctly in Vercel
-   - Should be: `https://perfect-goals.onrender.com`
+   - Should be: `https://perfect-goals-15mr.onrender.com`
 
 ## Expected Timeline
 - **Code Push**: ✅ Done

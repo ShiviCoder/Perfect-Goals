@@ -2,9 +2,9 @@
 const testEndpoint = async () => {
   try {
     console.log('🔍 Testing signature endpoint deployment...');
-    
-    const response = await fetch('https://perfect-goals.onrender.com/api/signature-status/1');
-    
+
+    const response = await fetch('https://perfect-goals-15mr.onrender.com/api/signature-status/1');
+
     if (response.ok) {
       console.log('✅ Signature endpoint is working!');
       const data = await response.json();

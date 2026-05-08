@@ -84,7 +84,7 @@ FRONTEND_URL=https://your-app.vercel.app
 5. Click **"Deploy"**
 6. Copy your backend URL (e.g., `https://perfect-your-goals-production.up.railway.app`)
 
-### Step 4: Deploy Frontend on Vercel
+### Step 4: Deploy Frontend on Vercel (Production)
 1. Go to https://vercel.com and sign up/login
 2. Click **"Add New"** → **"Project"**
 3. Import your GitHub repository
@@ -92,7 +92,7 @@ FRONTEND_URL=https://your-app.vercel.app
 5. Root Directory: `./` (leave as default)
 6. Add Environment Variable:
    - Name: `VITE_API_URL`
-   - Value: `<your Railway backend URL from Step 3>`
+   - Value: `https://perfect-goals-15mr.onrender.com`
 7. Click **"Deploy"**
 8. Copy your frontend URL (e.g., `https://perfect-your-goals.vercel.app`)
 
@@ -143,7 +143,7 @@ Since Railway has limited storage, you have 2 options:
 ## ✅ Post-Deployment Testing
 
 ### 1. Test Backend
-Visit: `https://your-backend-url/ping`
+Visit: `https://perfect-goals-15mr.onrender.com/ping`
 Should return: `{"message":"pong","env":"production"}`
 
 ### 2. Test Frontend

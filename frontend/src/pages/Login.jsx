@@ -14,12 +14,12 @@ const Login = () => {
 
     try {
       // Use environment variable for backend URL
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      
+      const apiUrl = import.meta.env.VITE_API_URL || 'https://perfect-goals-15mr.onrender.com';
+
       console.log('🔍 Environment API URL:', import.meta.env.VITE_API_URL);
       console.log('🔍 Final API URL:', apiUrl);
       console.log('🔍 Login URL:', `${apiUrl}/login`);
-      
+
       const res = await fetch(`${apiUrl}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -1,5 +1,5 @@
 // API Configuration
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+export const API_URL = import.meta.env.VITE_API_URL || 'https://perfect-goals-15mr.onrender.com';
 
 // Helper function for API calls
 export const apiCall = async (endpoint, options = {}) => {

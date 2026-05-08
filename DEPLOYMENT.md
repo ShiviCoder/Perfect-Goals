@@ -18,7 +18,7 @@ npm install dotenv multer
 
 2. Create `.env` file in `backend/` folder:
 ```env
-DB_HOST=your_mysql_host
+DB_HOST=your_postgres_host
 DB_USER=your_mysql_user
 DB_PASSWORD=your_mysql_password
 DB_NAME=perfectgoal
@@ -30,7 +30,7 @@ FRONTEND_URL=https://your-frontend-url.vercel.app
 ### Frontend Setup
 1. Create `.env` file in root folder:
 ```env
-VITE_API_URL=https://your-backend-url.railway.app
+VITE_API_URL=https://perfect-goals-15mr.onrender.com
 ```
 
 ---
